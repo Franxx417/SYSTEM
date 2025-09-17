@@ -2,7 +2,7 @@
 // Expose editSupplier as a global function
 window.editSupplier = function editSupplier(id, name, vatType, address, contactPerson, contactNumber, tinNo) {
     var form = document.getElementById('editSupplierForm');
-    if (form) form.action = '/suppliers/' + id;
+    if (form) form.action = '/suppliers/' + id + '/edit';
     
     var el;
     el = document.getElementById('edit_name'); if (el) el.value = name || '';

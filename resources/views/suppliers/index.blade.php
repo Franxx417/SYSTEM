@@ -47,7 +47,6 @@
                 </div>
                 <form id="editSupplierForm" method="POST">
                     @csrf
-                    @method('PUT')
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">

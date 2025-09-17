@@ -141,7 +141,6 @@
                 </div>
                 <form id="poEditForm" method="POST" data-latest-price-url="{{ route('api.items.latest_price') }}">
                     @csrf
-                    @method('PUT')
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-lg-6">
