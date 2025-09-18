@@ -12,6 +12,8 @@
     @vite(['resources/css/app.css','resources/js/app.js'])
     <link rel="stylesheet" href="/css/custom.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    @stack('styles')
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -62,7 +64,6 @@
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.users.index') }}">Users</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}">Suppliers</a></li>
                 @elseif($auth && $auth['role']==='superadmin')
-                    <li class="nav-item"><a class="nav-link @if(request()->is('superadmin')) active @endif" href="{{ route('superadmin.index') }}">Superadmin</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.users.index') }}">Users</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}">Suppliers</a></li>
                 @endif
@@ -118,6 +119,8 @@
         </div>
       </div>
     </div>
+
+    @stack('scripts')
 </body>
 </html>
 

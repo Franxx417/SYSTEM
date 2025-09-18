@@ -28,8 +28,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/api/dashboard/summary', [DashboardController::class, 'summary'])->name('api.dashboard.summary');
 
-// Superadmin control panel
-Route::get('/superadmin', [SuperAdminController::class, 'index'])->name('superadmin.index');
+// Superadmin control panel (redirect index to dashboard – features consolidated under Dashboard)
+Route::get('/superadmin', function (\Illuminate\Http\Request $request) {
+    return redirect()->route('dashboard', $request->only('tab'));
+})->name('superadmin.index');
 Route::post('/superadmin/branding', [SuperAdminController::class, 'updateBranding'])->name('superadmin.branding');
 Route::post('/superadmin/system', [SuperAdminController::class, 'systemAction'])->name('superadmin.system');
 Route::get('/superadmin/database', [SuperAdminController::class, 'showDatabaseSettings'])->name('superadmin.database');
