@@ -1,0 +1,30 @@
+# Environment files
+.env.local
+.env.production
+.env.development
+
+# Log files
+logs/*.log
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PHP files
+vendor/
+composer.lock
+
+# Backup files
+*.bak
+*.backup
