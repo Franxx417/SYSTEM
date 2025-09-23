@@ -11,6 +11,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemsController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\AccountSettingsController;
 
 // Removed old tutorial PostController routes (controller no longer exists)
 
@@ -41,11 +42,27 @@ Route::post('/superadmin/query', [SuperAdminController::class, 'executeQuery'])-
 Route::get('/superadmin/logs', [SuperAdminController::class, 'showLogs'])->name('superadmin.logs');
 Route::post('/superadmin/logs/clear', [SuperAdminController::class, 'clearLogs'])->name('superadmin.logs.clear');
 
+// Account Settings (All authenticated users)
+Route::prefix('settings')->name('settings.')->group(function () {
+    Route::get('/', [AccountSettingsController::class, 'index'])->name('index');
+    Route::post('/profile', [AccountSettingsController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/password', [AccountSettingsController::class, 'updatePassword'])->name('password.update');
+    Route::post('/preferences', [AccountSettingsController::class, 'updatePreferences'])->name('preferences.update');
+    Route::post('/role-settings', [AccountSettingsController::class, 'updateRoleSettings'])->name('role.update');
+    Route::post('/avatar', [AccountSettingsController::class, 'uploadAvatar'])->name('avatar.upload');
+    Route::post('/delete-account', [AccountSettingsController::class, 'deleteAccount'])->name('account.delete');
+    Route::post('/export-data', [AccountSettingsController::class, 'exportData'])->name('data.export');
+    // JSON endpoints consumed by account-settings.js
+    Route::get('/login-activity', [AccountSettingsController::class, 'loginActivity'])->name('login.activity');
+    Route::get('/activity-log', [AccountSettingsController::class, 'activityLog'])->name('activity.log');
+});
+
 // Admin: user management (authorized_personnel)
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    Route::post('/users/{userId}/toggle', [UserController::class, 'toggleActive'])->name('users.toggle');
 });
 
 // Purchase Orders (Requestor)
@@ -78,7 +95,8 @@ Route::prefix('items')->name('items.')->group(function () {
     Route::get('/create', [ItemsController::class, 'create'])->name('create');
     Route::post('/', [ItemsController::class, 'store'])->name('store');
     Route::get('/{id}/edit', [ItemsController::class, 'edit'])->name('edit');
-    Route::post('/{id}/edit', [ItemsController::class, 'update'])->name('update');
+    Route::put('/{id}', [ItemsController::class, 'update'])->name('update');
+    Route::post('/{id}/edit', [ItemsController::class, 'update'])->name('update.post'); // Keep POST for compatibility
     Route::delete('/{id}', [ItemsController::class, 'destroy'])->name('destroy');
 });
 

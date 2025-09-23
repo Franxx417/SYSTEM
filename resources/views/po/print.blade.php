@@ -4,14 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PO {{ $po->purchase_order_no }}</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- jQuery and jQuery UI -->
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         @page { size: A4; margin: 48px; }
         body { font-family: 'Calibri Body', Calibri, Arial, Helvetica, sans-serif; color:#111; }
@@ -40,7 +32,6 @@
         .grid td { height:26px; }
         .right { text-align:right; }
         .small { font-size:11px; color:#444; }
-        .nowrap { white-space: nowrap; }
         .meta { width:260px; margin-top:8px; }
         .signatures { width:100%; margin-top:28px;}
         .sig-box { height:54px; }
@@ -54,12 +45,7 @@
 <body>
     <div class="container">
         <div class="no-print" style="margin:10px 0; text-align:right">
-            <button class="btn btn-primary me-2" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print
-            </button>
-            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editPoModal">
-                <i class="bi bi-pencil-square"></i> Edit PO
-            </button>
+            <button onclick="window.print()">Print</button>
         </div>
         @php
             $companyLogo = \App\Models\Setting::getCompanyLogo();
@@ -109,12 +95,12 @@
             <tr>
                 <td style="width:25%; font-weight:bold; background:#f5f5f5;">Supplier/ Vendor Name:</td>
                 <td style="width:45%;">{{ $po->supplier_name }}</td>
-                <td class="nowrap" style="width:30%; font-weight:bold; background:#f5f5f5; vertical-align:top;">TIN No.: {{ $po->tin_no ?? '' }}</td>
+                <td style="width:30%; font-weight:bold; background:#f5f5f5; vertical-align:top;">TIN No.: {{ $po->tin_no ?? '' }}</td>
             </tr>
             <tr>
                 <td style="font-weight:bold; background:#f5f5f5;">Supplier/ Vendor Address:</td>
                 <td>{{ $po->supplier_address ?? '' }}</td>
-                <td class="nowrap" style="font-weight:bold; background:#f5f5f5; vertical-align:top;">
+                <td style="font-weight:bold; background:#f5f5f5; vertical-align:top;">
                     @if($po->vat_type == 'VAT')
                         VAT <u>&#x2713;</u> &nbsp;&nbsp; Non-VAT ___
                     @elseif($po->vat_type == 'Non_VAT' || $po->vat_type == 'Non-VAT')
@@ -127,19 +113,22 @@
             @if($po->contact_person)
             <tr>
                 <td style="font-weight:bold; background:#f5f5f5;">Contact Person:</td>
-                <td colspan="2">{{ $po->contact_person }}</td>
+                <td>{{ $po->contact_person }}</td>
+                <td></td>
             </tr>
             @endif
             @if($po->contact_number)
             <tr>
                 <td style="font-weight:bold; background:#f5f5f5;">Contact Number:</td>
-                <td colspan="2">{{ $po->contact_number }}</td>
+                <td>{{ $po->contact_number }}</td>
+                <td></td>
             </tr>
             @endif
             @if($po->delivery_date)
             <tr>
                 <td style="font-weight:bold; background:#f5f5f5;">Delivery Date:</td>
-                <td colspan="2">{{ $po->delivery_date }}</td>
+                <td>{{ $po->delivery_date }}</td>
+                <td></td>
             </tr>
             @endif
         </table>
@@ -226,58 +215,6 @@
 
         <div class="footer-code">{{ config('app.document_code', 'GAS-FIN-LPO-PH-003 Rev. 02') }}</div>
     </div>
-
-    <!-- Edit PO Modal -->
-    <div class="modal fade" id="editPoModal" tabindex="-1" aria-labelledby="editPoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="editPoModalLabel">Edit Purchase Order</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editPoForm" method="POST" action="{{ route('po.update', $po->id) }}">
-                        @csrf
-                        @method('PUT')
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Supplier</label>
-                                    <input type="text" class="form-control" value="{{ $po->supplier_name }}" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">PO Number</label>
-                                    <input type="text" class="form-control" value="{{ $po->purchase_order_no }}" readonly>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Add more fields as needed -->
-                        <div class="mb-3">
-                            <label class="form-label">Purpose/Use</label>
-                            <textarea class="form-control" name="purpose" rows="3">{{ $po->purpose }}</textarea>
-                        </div>
-                        
-                        <div class="text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .modal-backdrop {
-            opacity: 0.5 !important;
-        }
-        .modal-content {
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-    </style>
 </body>
 </html>
 

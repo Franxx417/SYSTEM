@@ -92,7 +92,7 @@
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
                                         <button class="btn btn-outline-primary" title="Edit" 
-                                                onclick="editItem('{{ $item->item_id }}', '{{ addslashes($item->item_name ?: $item->item_description) }}', '{{ addslashes($item->item_description) }}', '{{ $item->quantity }}', '{{ $item->unit_price }}')">
+                                                onclick="editItem('{{ $item->item_id }}', '{{ addslashes($item->item_name ?: $item->item_description) }}', '{{ addslashes($item->item_description) }}', '{{ $item->unit_price }}')">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
   <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
   <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
@@ -180,10 +180,7 @@
                                 <label class="form-label">Description</label>
                                 <textarea class="form-control" name="item_description" id="edit_item_description" rows="3" maxlength="255"></textarea>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Quantity</label>
-                                <input class="form-control" name="quantity" id="edit_quantity" type="number" min="1" required />
-                            </div>
+                            <input type="hidden" name="quantity" id="edit_quantity" value="1" />
                             <div class="col-md-6">
                                 <label class="form-label">Unit Price</label>
                                 <input class="form-control" name="unit_price" id="edit_unit_price" type="number" min="0" step="0.01" required />

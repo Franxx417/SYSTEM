@@ -13,25 +13,25 @@
 <!-- System Overview Cards -->
 <div class="row g-3 mb-4">
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm metric-card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small">System Status</div>
-                        <div class="h5 mb-0 text-success">Online</div>
+                        <div class="h3 mb-0 text-success">Online</div>
                     </div>
-                    <div class="status-indicator status-online pulse"></div>
+                    <i class="fas fa-server text-success"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm metric-card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small">Total Users</div>
-                        <div class="h5 mb-0">{{ $metrics['users'] ?? 0 }}</div>
+                        <div class="h3 mb-0">{{ $metrics['users'] ?? 0 }}</div>
                     </div>
                     <i class="fas fa-users text-primary"></i>
                 </div>
@@ -39,12 +39,12 @@
         </div>
     </div>
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm metric-card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small">Active Sessions</div>
-                        <div class="h5 mb-0">{{ $metrics['active_sessions'] ?? 0 }}</div>
+                        <div class="h3 mb-0">{{ $metrics['active_sessions'] ?? 0 }}</div>
                     </div>
                     <i class="fas fa-user-clock text-info"></i>
                 </div>
@@ -52,12 +52,12 @@
         </div>
     </div>
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 shadow-sm metric-card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small">Database Size</div>
-                        <div class="h5 mb-0">{{ $metrics['db_size'] ?? 'N/A' }}</div>
+                        <div class="h3 mb-0">{{ $metrics['db_size'] ?? 'N/A' }}</div>
                     </div>
                     <i class="fas fa-database text-warning"></i>
                 </div>
@@ -67,19 +67,22 @@
 </div>
 
 @php($active = request()->get('tab','overview'))
-<ul class="nav nav-pills mb-4">
-    <li class="nav-item"><a class="nav-link {{ $active==='overview' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'overview']) }}"><i class="fas fa-tachometer-alt me-1"></i>Overview</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='users' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'users']) }}"><i class="fas fa-users me-1"></i>User Management</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='security' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'security']) }}"><i class="fas fa-shield-alt me-1"></i>Security</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='system' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'system']) }}"><i class="fas fa-cogs me-1"></i>System</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='database' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'database']) }}"><i class="fas fa-database me-1"></i>Database</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='logs' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'logs']) }}"><i class="fas fa-file-alt me-1"></i>Logs</a></li>
-    <li class="nav-item"><a class="nav-link {{ $active==='branding' ? 'active' : '' }}" href="{{ route('dashboard',['tab'=>'branding']) }}"><i class="fas fa-palette me-1"></i>Branding</a></li>
-</ul>
+@php($tabMap = [
+    'purchase-orders' => 'pos',
+    'user-management' => 'users',
+    'role-management' => 'roles',
+    'security' => 'security',
+    'system' => 'system',
+    'database' => 'database',
+    'logs' => 'logs',
+    'branding' => 'branding',
+    'overview' => 'overview'
+])
+@php($tabFile = $tabMap[$active] ?? 'overview')
 
 <!-- Tab Content -->
 <div class="tab-content">
-    @include('dashboards.superadmin.tabs.' . $active, ['active' => $active])
+    @include('dashboards.superadmin.tabs.' . $tabFile, ['active' => $active])
 </div>
 
 </div>

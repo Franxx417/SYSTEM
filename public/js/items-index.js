@@ -15,7 +15,7 @@ window.confirmDelete = function confirmDelete(itemId, itemName) {
     }
 };
 
-window.editItem = function editItem(id, itemName, description, quantity, unitPrice) {
+window.editItem = function editItem(id, itemName, description, unitPrice) {
     var form = document.getElementById('editItemForm');
     if (form) {
         form.action = '/items/' + id;
@@ -25,7 +25,7 @@ window.editItem = function editItem(id, itemName, description, quantity, unitPri
     var descInput = document.getElementById('edit_item_description');
     if (descInput) descInput.value = description || '';
     var qtyInput = document.getElementById('edit_quantity');
-    if (qtyInput) qtyInput.value = quantity || '';
+    if (qtyInput) qtyInput.value = '1'; // Always set quantity to 1
     var priceInput = document.getElementById('edit_unit_price');
     if (priceInput) priceInput.value = unitPrice || '';
     if (window.bootstrap && document.getElementById('editItemModal')) {
