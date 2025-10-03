@@ -10,16 +10,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title','Dashboard') - Procurement</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    @vite(['resources/css/app.css','resources/js/app.js'])
-    <link rel="stylesheet" href="/css/custom.css">
+    @vite([
+        'resources/css/app.css',
+        'resources/css/components/custom.css',
+        'resources/js/app.js',
+        'resources/js/bootstrap.js',
+        'resources/js/components/modal-manager.js',
+        'resources/js/components/status-sync.js',
+        'resources/js/components/status-management.js'
+    ])
+    <link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     @stack('styles')
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/modal-manager.js"></script>
-    <script src="/js/status-sync.js"></script>
     <style>
         .sidebar { 
             width: 240px; 
@@ -206,16 +212,24 @@
                     <li class="nav-item"><a class="nav-link @if(request()->is('admin/users*')) active @endif" href="{{ route('admin.users.index') }}"><i class="fas fa-users me-2"></i>User Management</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
                 @elseif($auth && $auth['role']==='superadmin')
-                    <!-- Superadmin specific navigation -->
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'purchase-orders') active @endif" href="{{ route('dashboard') }}?tab=purchase-orders"><i class="fas fa-file-invoice me-2"></i>Purchase Orders</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('admin/users*') || (request()->is('dashboard') && request()->get('tab') === 'user-management')) active @endif" href="{{ route('dashboard') }}?tab=user-management"><i class="fas fa-users me-2"></i>User Management</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'role-management') active @endif" href="{{ route('dashboard') }}?tab=role-management"><i class="fas fa-user-shield me-2"></i>Role Management</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'security') active @endif" href="{{ route('dashboard') }}?tab=security"><i class="fas fa-shield-alt me-2"></i>Security</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'system') active @endif" href="{{ route('dashboard') }}?tab=system"><i class="fas fa-cogs me-2"></i>System</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'database') active @endif" href="{{ route('dashboard') }}?tab=database"><i class="fas fa-database me-2"></i>Database</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'logs') active @endif" href="{{ route('dashboard') }}?tab=logs"><i class="fas fa-file-alt me-2"></i>Logs</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'branding') active @endif" href="{{ route('dashboard') }}?tab=branding"><i class="fas fa-palette me-2"></i>Branding</a></li>
+                    <!-- SUPERADMIN UNRESTRICTED ACCESS - All System Features -->
+                    <li class="nav-item">
+                        <div class="nav-link text-muted small fw-bold text-uppercase px-2 mb-1">SYSTEM MANAGEMENT</div>
+                    </li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'purchase-orders') active @endif" href="{{ route('dashboard') }}?tab=purchase-orders"><i class="fas fa-file-invoice me-2"></i>All Purchase Orders</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('po*')) active @endif" href="{{ route('po.index') }}"><i class="fas fa-plus-circle me-2"></i>Create Purchase Order</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'user-management') active @endif" href="{{ route('dashboard') }}?tab=user-management"><i class="fas fa-users me-2"></i>User Management</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
+                    
+                    <li class="nav-item">
+                        <div class="nav-link text-muted small fw-bold text-uppercase px-2 mb-1 mt-3">SYSTEM ADMINISTRATION</div>
+                    </li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'status') active @endif" href="{{ route('dashboard') }}?tab=status"><i class="fas fa-traffic-light me-2"></i>Status Management</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'security') active @endif" href="{{ route('dashboard') }}?tab=security"><i class="fas fa-shield-alt me-2"></i>Security & Access</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'database') active @endif" href="{{ route('dashboard') }}?tab=database"><i class="fas fa-database me-2"></i>Database Management</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'logs') active @endif" href="{{ route('dashboard') }}?tab=logs"><i class="fas fa-file-alt me-2"></i>System Logs</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'system') active @endif" href="{{ route('dashboard') }}?tab=system"><i class="fas fa-cogs me-2"></i>System Settings</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'branding') active @endif" href="{{ route('dashboard') }}?tab=branding"><i class="fas fa-palette me-2"></i>Branding & UI</a></li>
                 @endif
                 
                 <!-- Settings link for all authenticated users -->
@@ -245,6 +259,9 @@
                     <div class="d-none d-lg-block text-end">
                         <div class="fw-semibold">{{ $auth['name'] ?? '' }}</div>
                         <div class="text-muted small">{{ $auth['department'] ?? '' }}</div>
+                        @if($auth && $auth['role'] === 'superadmin')
+                            <div class="badge bg-danger small">SUPERADMIN - UNRESTRICTED ACCESS</div>
+                        @endif
                     </div>
                     <!-- Mobile user info -->
                     <div class="d-lg-none">
@@ -257,6 +274,9 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><h6 class="dropdown-header">{{ $auth['name'] ?? '' }}</h6></li>
                                 <li><span class="dropdown-item-text small text-muted">{{ $auth['department'] ?? '' }}</span></li>
+                                @if($auth && $auth['role'] === 'superadmin')
+                                    <li><span class="dropdown-item-text"><span class="badge bg-danger small">SUPERADMIN ACCESS</span></span></li>
+                                @endif
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ route('settings.index') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                 <li>

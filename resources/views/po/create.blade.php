@@ -8,7 +8,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/po-create.js" ></script>
+    @vite(['resources/js/pages/po-create.js'])
     <!-- PO create form: supplier, dates, items, and realtime totals -->
     <form method="POST" action="{{ route('po.store') }}" id="poForm" data-next-number-url="{{ route('po.next_number') }}" data-latest-price-url="{{ route('api.items.latest_price') }}">
         @csrf
@@ -136,8 +136,9 @@
             <div id="items"></div>
         </div></div>
 
-        <div class="mt-3 d-flex justify-content-end">
-            <button class="btn btn-primary" type="submit">Create</button>
+        <div class="mt-3 d-flex justify-content-end gap-2">
+            <button class="btn btn-outline-primary" type="submit" name="action" value="save">Save</button>
+            <button class="btn btn-primary" type="submit" name="action" value="save_and_print">Save & Print</button>
         </div>
     </form>
 

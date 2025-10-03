@@ -42,6 +42,44 @@
 
         <div class="card border-0 shadow-sm mt-3">
             <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-image me-2"></i>Company Logo</h6>
+            </div>
+            <div class="card-body">
+                @if($currentLogo)
+                    <div class="mb-3">
+                        <label class="form-label">Current Logo</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="{{ $currentLogo }}" alt="Company Logo" class="img-thumbnail" style="max-height: 80px; max-width: 200px;">
+                            <form method="POST" action="{{ route('settings.logo.remove') }}" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to remove the logo?')">
+                                    <i class="fas fa-trash me-1"></i>Remove Logo
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+                
+                <form method="POST" action="{{ route('settings.logo.upload') }}" enctype="multipart/form-data">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label">{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}</label>
+                        <input type="file" class="form-control" name="logo" accept="image/*" required>
+                        <div class="form-text">
+                            Supported formats: JPEG, PNG, GIF, SVG, WebP. Maximum size: 2MB.<br>
+                            Recommended dimensions: 300x100px for optimal display on documents.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header">
                 <h6 class="mb-0"><i class="fas fa-lock me-2"></i>Change Password</h6>
             </div>
             <div class="card-body">

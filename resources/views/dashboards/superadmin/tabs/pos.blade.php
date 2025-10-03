@@ -87,11 +87,9 @@
                                     <td class="d-none d-md-table-cell">{{ Str::limit($po->purpose ?? '', 50) }}</td>
                                     <td>
                                         @if(isset($po->status_name))
-                                            <span class="badge bg-{{ $po->status_name === 'Approved' ? 'success' : ($po->status_name === 'Pending' ? 'warning' : 'secondary') }}">
-                                                {{ $po->status_name }}
-                                            </span>
+                                            @include('partials.status-display', ['status' => $po->status_name, 'type' => 'badge'])
                                         @else
-                                            <span class="badge bg-secondary">No Status</span>
+                                            @include('partials.status-display', ['status' => 'No Status', 'type' => 'badge'])
                                         @endif
                                     </td>
                                     <td class="d-none d-lg-table-cell">₱{{ number_format($po->total ?? 0, 2) }}</td>

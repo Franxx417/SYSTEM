@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 class ApprovalController extends Controller
 {
-    /** Get current session user or 403 */
+    /** Get current session user or 403 - SUPERADMIN HAS UNRESTRICTED ACCESS */
     private function auth(Request $request): array
     {
         $auth = $request->session()->get('auth_user');
@@ -27,11 +27,14 @@ class ApprovalController extends Controller
         return $auth;
     }
 
-    /** Mark PO as Received (authorized_personnel only) */
+    /** Mark PO as Received - SUPERADMIN HAS UNRESTRICTED ACCESS */
     public function receive(Request $request, string $poId)
     {
         $auth = $this->auth($request);
-        if ($auth['role'] !== 'authorized_personnel') abort(403);
+        // SUPERADMIN HAS UNRESTRICTED ACCESS TO EVERYTHING
+        if ($auth['role'] !== 'authorized_personnel' && $auth['role'] !== 'superadmin') {
+            abort(403);
+        }
         DB::table('approvals')->where('purchase_order_id', $poId)->update([
             'received_by_id' => $auth['user_id'],
             'received_at' => now(),

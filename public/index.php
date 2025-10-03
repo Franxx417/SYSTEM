@@ -3,6 +3,10 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+// Increase execution time limit to prevent timeouts
+ini_set('max_execution_time', 120);
+ini_set('memory_limit', '256M');
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

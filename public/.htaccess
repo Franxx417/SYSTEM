@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Ensure JavaScript files are served with correct MIME type
+    <FilesMatch "\.(js)$">
+        Header set Content-Type "application/javascript"
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

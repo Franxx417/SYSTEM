@@ -18,11 +18,21 @@ use App\Http\Requests\StorePurchaseOrderRequest;
  */
 class PurchaseOrderController extends Controller
 {
-    /** Ensure the current session user has the required role */
+    /** Ensure the current session user has the required role - SUPERADMIN HAS UNRESTRICTED ACCESS */
     private function requireRole(Request $request, string $role): array
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth || $auth['role'] !== $role) {
+        if (!$auth) {
+            abort(403);
+        }
+        
+        // SUPERADMIN HAS UNRESTRICTED ACCESS TO EVERYTHING
+        if ($auth['role'] === 'superadmin') {
+            return $auth;
+        }
+        
+        // For non-superadmin users, check specific role
+        if ($auth['role'] !== $role) {
             abort(403);
         }
         return $auth;
@@ -35,11 +45,18 @@ class PurchaseOrderController extends Controller
         
         $query = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
-            ->leftJoin('approvals as ap', 'ap.purchase_order_id', '=', 'po.purchase_order_id')
+            ->leftJoin('approvals as ap', function($join) {
+                $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
+                     ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+            })
             ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
-            ->where('po.requestor_id', $auth['user_id'])
             ->whereNotNull('st.status_name') // Only show POs with status
             ->select('po.*', 's.name as supplier_name', 'st.status_name', 'st.status_id');
+        
+        // SUPERADMIN sees ALL POs, regular users see only their own
+        if ($auth['role'] !== 'superadmin') {
+            $query->where('po.requestor_id', $auth['user_id']);
+        }
         
         // Apply filters
         if ($request->filled('search')) {
@@ -256,6 +273,11 @@ class PurchaseOrderController extends Controller
             return back()->withErrors(['create' => 'Failed to create Purchase Order. '.$e->getMessage()])->withInput();
         }
 
+        // Check if user clicked "Save & Print" button
+        if ($request->input('action') === 'save_and_print') {
+            return redirect()->route('po.print', $created['po_no'])->with('status', 'Purchase Order created and ready to print');
+        }
+        
         return redirect()->route('po.show', $created['po_no'])->with('status','Purchase Order created');
         
         
@@ -415,7 +437,11 @@ class PurchaseOrderController extends Controller
             ->first();
         if (!$po) abort(404);
         $items = DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->get();
-        return view('po.print', compact('po','items','auth'));
+        
+        // Get company logo for print view
+        $companyLogo = \App\Models\Setting::getCompanyLogo();
+        
+        return view('po.print', compact('po','items','auth','companyLogo'));
     }
 
     /** Lightweight PO JSON for modals (any logged-in role) */

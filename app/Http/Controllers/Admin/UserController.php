@@ -32,14 +32,6 @@ class UserController extends Controller
         }
     }
 
-    /**
-     * Show create user form
-     */
-    public function create(Request $request)
-    {
-        $this->authorizeAdmin($request);
-        return view('admin.users.create');
-    }
 
     /**
      * Store new user
@@ -48,21 +40,35 @@ class UserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'username' => 'required|string|max:255|unique:login,username',
-            'password' => 'required|string|min:6',
-            'position' => 'nullable|string|max:255',
-            'department' => 'nullable|string|max:255',
-            'role' => 'required|in:requestor,authorized_personnel,superadmin',
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|max:255|unique:users,email',
+                'username' => 'required|string|max:255|unique:login,username',
+                'password' => 'required|string|min:6|confirmed',
+                'position' => 'nullable|string|max:255',
+                'department' => 'nullable|string|max:255',
+                'role' => 'required|in:requestor,authorized_personnel,superadmin',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            return back()->withErrors($e->errors())->withInput();
+        }
 
         try {
             DB::beginTransaction();
 
-            // Create user
-            $userId = DB::table('users')->insertGetId([
+            // Generate UUID for user
+            $userId = (string) \Illuminate\Support\Str::uuid();
+
+            // Create user record (password is stored in login table, not users table)
+            DB::table('users')->insert([
+                'user_id' => $userId,
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'position' => $validated['position'],
@@ -72,35 +78,91 @@ class UserController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Create login credentials
-            DB::table('login')->insert([
-                'user_id' => $userId,
-                'username' => $validated['username'],
-                'password' => Hash::make($validated['password']),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Assign role
-            $roleTypeId = DB::table('role_types')
-                ->where('user_role_type', $validated['role'])
-                ->value('role_type_id');
-
-            if ($roleTypeId) {
-                DB::table('roles')->insert([
+            // Create login credentials (if separate login table is used)
+            if (Schema::hasTable('login')) {
+                DB::table('login')->insert([
                     'user_id' => $userId,
-                    'role_type_id' => $roleTypeId,
+                    'username' => $validated['username'],
+                    'password' => Hash::make($validated['password']),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
 
+            // Assign role (if separate roles table is used)
+            if (Schema::hasTable('role_types') && Schema::hasTable('roles')) {
+                $roleTypeId = DB::table('role_types')
+                    ->where('user_role_type', $validated['role'])
+                    ->value('role_type_id');
+
+                if ($roleTypeId) {
+                    DB::table('roles')->insert([
+                        'user_id' => $userId,
+                        'role_type_id' => $roleTypeId,
+                    ]);
+                } else {
+                    // Role type not found, log warning but continue
+                    Log::warning('Role type not found in role_types table', [
+                        'role' => $validated['role'],
+                        'available_roles' => DB::table('role_types')->pluck('user_role_type')->toArray()
+                    ]);
+                    
+                    // Create the role type if it doesn't exist
+                    $roleTypeId = DB::table('role_types')->insertGetId([
+                        'user_role_type' => $validated['role'],
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                    
+                    // Now insert the role
+                    DB::table('roles')->insert([
+                        'user_id' => $userId,
+                        'role_type_id' => $roleTypeId,
+                    ]);
+                    
+                    Log::info('Created missing role type', [
+                        'role' => $validated['role'],
+                        'role_type_id' => $roleTypeId
+                    ]);
+                }
+            }
+
             DB::commit();
+
+            // Log the user creation
+            Log::info('User created successfully', [
+                'user_id' => $userId,
+                'username' => $validated['username'],
+                'role' => $validated['role'],
+                'created_by' => $request->session()->get('auth_user.username')
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User created successfully',
+                    'user_id' => $userId
+                ]);
+            }
 
             return redirect()->route('admin.users.index')->with('status', 'User created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Failed to create user'])->withInput();
+            
+            Log::error('User creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->except(['password', 'password_confirmation'])
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create user: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()])->withInput();
         }
     }
 

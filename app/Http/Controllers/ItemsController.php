@@ -9,13 +9,18 @@ use Illuminate\Support\Str;
 class ItemsController extends Controller
 {
     /**
-     * Require user to have specific role(s)
+     * Require user to have specific role(s) or be superadmin
      */
     private function requireRole(Request $request, $roles): array
     {
         $auth = $request->session()->get('auth_user');
         if (!$auth) {
             abort(403);
+        }
+        
+        // Superadmin has access to everything
+        if ($auth['role'] === 'superadmin') {
+            return $auth;
         }
         
         // Handle both single role and array of roles

@@ -4,9 +4,96 @@
 @section('page_subheading','Create and track your purchase orders')
 @section('content')
     <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <style>
+        /* Status cards for modal */
+        .status-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 4px 0;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            min-width: 140px;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status-card.active {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .status-description {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .status-action {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        
+        /* Status-specific colors for modal cards */
+        .status-card.pending { background: #fff3cd; border-color: #ffc107; }
+        .status-card.pending .status-icon { background: #ffc107; }
+        .status-card.pending .status-action { background: #ffc107; color: #000; }
+        .status-card.pending .status-action:hover { background: #e0a800; color: #000; }
+        
+        .status-card.verified { background: #d1ecf1; border-color: #17a2b8; }
+        .status-card.verified .status-icon { background: #17a2b8; }
+        .status-card.verified .status-action { background: #17a2b8; color: #fff; }
+        .status-card.verified .status-action:hover { background: #138496; color: #fff; }
+        
+        .status-card.approved { background: #d4edda; border-color: #28a745; }
+        .status-card.approved .status-icon { background: #28a745; }
+        .status-card.approved .status-action { background: #28a745; color: #fff; }
+        .status-card.approved .status-action:hover { background: #1e7e34; color: #fff; }
+        
+        .status-card.received { background: #e2e3f1; border-color: #6f42c1; }
+        .status-card.received .status-icon { background: #6f42c1; }
+        .status-card.received .status-action { background: #6f42c1; color: #fff; }
+        .status-card.received .status-action:hover { background: #5a32a3; color: #fff; }
+        
+        .status-card.rejected { background: #f8d7da; border-color: #dc3545; }
+        .status-card.rejected .status-icon { background: #dc3545; }
+        .status-card.rejected .status-action { background: #dc3545; color: #fff; }
+        .status-card.rejected .status-action:hover { background: #c82333; color: #fff; }
+        
+        .status-card.cancelled { background: #e2e3e5; border-color: #6c757d; }
+        .status-card.cancelled .status-icon { background: #6c757d; }
+        .status-card.cancelled .status-action { background: #6c757d; color: #fff; }
+        .status-card.cancelled .status-action:hover { background: #545b62; color: #fff; }
+    </style>
     <!-- Filters and New PO button -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
     <div class="row mb-3">
@@ -85,17 +172,17 @@
                         <td>{{ Str::limit($po->purpose, 30) }}</td>
                         <td>{{ Str::limit($po->supplier_name ?? '—', 20) }}</td>
                         <td>
-                            <form method="POST" action="{{ route('po.update_status', $po->purchase_order_no) }}" class="d-inline">
-                                @csrf
-                                <select name="status_id" class="form-select form-select-sm status-dropdown" data-current-status="{{ optional($statuses->firstWhere('status_id', $po->status_id))->status_name }}" data-po="{{ $po->purchase_order_no }}">
-                                    @foreach($statuses as $status)
-                                        <option value="{{ $status->status_id }}" {{ $po->status_id == $status->status_id ? 'selected' : '' }}>
-                                            {{ $status->status_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <input type="hidden" name="remarks" value="Status changed via dropdown">
-                            </form>
+                            @php
+                                $currentStatus = $statuses->firstWhere('status_id', $po->status_id);
+                                $statusName = $currentStatus ? $currentStatus->status_name : 'Unknown';
+                            @endphp
+                            
+                            <div style="cursor: pointer;" 
+                                 data-po="{{ $po->purchase_order_no }}" 
+                                 data-current-status="{{ $statusName }}"
+                                 onclick="showStatusChangeModal('{{ $po->purchase_order_no }}', '{{ $statusName }}')">
+                                @include('partials.status-display', ['status' => $statusName, 'type' => 'circle'])
+                            </div>
                         </td>
                         <td class="text-end">₱{{ number_format($po->total, 2) }}</td>
                         <td class="text-center">
@@ -358,36 +445,142 @@
         </div>
     </div>
 
-    <!-- Status Change Confirmation Modal -->
+    <!-- Status Change Modal -->
     <div class="modal fade" id="statusChangeModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirm Status Change</h5>
+                    <h5 class="modal-title">Change Purchase Order Status</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to change the status of this Purchase Order?</p>
-                    <div class="bg-light p-3 rounded">
-                        <strong>PO #:</strong> <span id="status_po_number"></span><br>
-                        <strong>From:</strong> <span id="status_from"></span><br>
-                        <strong>To:</strong> <span id="status_to"></span>
+                    <div class="mb-3">
+                        <strong>Purchase Order:</strong> <span id="status_po_number"></span><br>
+                        <strong>Current Status:</strong> <span id="status_current"></span>
                     </div>
-                    <div class="mt-3">
-                        <label class="form-label">Remarks (Optional)</label>
-                        <textarea class="form-control" id="status_remarks" rows="2" placeholder="Add a note about this status change..."></textarea>
-                    </div>
+                    
+                    <form id="statusChangeForm" method="POST">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label">Select New Status:</label>
+                            <div class="row g-2" id="statusOptions">
+                                @foreach($statuses as $status)
+                                    @php
+                                        $statusClass = strtolower(str_replace(' ', '', $status->status_name));
+                                        $statusDescriptions = [
+                                            'pending' => 'Purchase order is awaiting review',
+                                            'verified' => 'Purchase order has been verified',
+                                            'approved' => 'Purchase order has been approved',
+                                            'received' => 'Purchase order items have been received',
+                                            'rejected' => 'Purchase order has been rejected',
+                                            'cancelled' => 'Purchase order has been cancelled'
+                                        ];
+                                        $description = $statusDescriptions[$statusClass] ?? 'Status description not available';
+                                    @endphp
+                                    <div class="col-md-6 mb-2">
+                                        <div class="status-card {{ $statusClass }} status-option" 
+                                             data-status-id="{{ $status->status_id }}" 
+                                             data-status-name="{{ $status->status_name }}"
+                                             onclick="selectStatus(this)">
+                                            <div class="status-title">
+                                                <span class="status-icon"></span>{{ $status->status_name }}
+                                            </div>
+                                            <div class="status-description">{{ $description }}</div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Remarks (Optional)</label>
+                            <textarea class="form-control" name="remarks" id="status_remarks" rows="2" placeholder="Add a note about this status change..."></textarea>
+                        </div>
+                        
+                        <input type="hidden" name="status_id" id="selected_status_id">
+                    </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmStatusChange">Confirm Change</button>
+                    <button type="button" class="btn btn-primary" id="confirmStatusChange" disabled>Update Status</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="/js/po-index.js"></script>
-    <script src="/js/po-edit.js"></script>
+    @vite(['resources/js/pages/po-index.js', 'resources/js/pages/po-edit.js'])
+    
+    <script>
+        // Global variables for status change
+        let currentPO = '';
+        let currentStatusName = '';
+        
+        // Show status change modal
+        function showStatusChangeModal(poNumber, statusName) {
+            currentPO = poNumber;
+            currentStatusName = statusName;
+            
+            document.getElementById('status_po_number').textContent = poNumber;
+            document.getElementById('status_current').textContent = statusName;
+            
+            // Reset form
+            document.getElementById('statusChangeForm').action = `/po/${poNumber}/status`;
+            document.getElementById('selected_status_id').value = '';
+            document.getElementById('status_remarks').value = '';
+            document.getElementById('confirmStatusChange').disabled = true;
+            
+            // Reset all status options
+            document.querySelectorAll('.status-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('statusChangeModal')).show();
+        }
+        
+        // Select status in modal
+        function selectStatus(element) {
+            // Remove active class from all options
+            document.querySelectorAll('.status-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Add active class to selected option
+            element.classList.add('active');
+            
+            // Set hidden input value
+            const statusId = element.getAttribute('data-status-id');
+            const statusName = element.getAttribute('data-status-name');
+            
+            document.getElementById('selected_status_id').value = statusId;
+            
+            // Enable confirm button if different status selected
+            const confirmBtn = document.getElementById('confirmStatusChange');
+            if (statusName !== currentStatusName) {
+                confirmBtn.disabled = false;
+            } else {
+                confirmBtn.disabled = true;
+            }
+        }
+        
+        // Handle status change confirmation
+        document.getElementById('confirmStatusChange').addEventListener('click', function() {
+            const form = document.getElementById('statusChangeForm');
+            const statusId = document.getElementById('selected_status_id').value;
+            
+            if (statusId) {
+                // Submit the form
+                form.submit();
+            }
+        });
+        
+        // Prevent status card click when clicking on preview link
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('status-action')) {
+                e.stopPropagation();
+            }
+        });
+    </script>
 @endsection
 
 

@@ -1,0 +1,36 @@
+# Increase PHP execution time and memory limits
+php_value max_execution_time 120
+php_value memory_limit 256M
+php_value max_input_time 60
+
+# Enable error reporting for debugging
+php_flag display_errors Off
+php_flag log_errors On
+
+# Optimize for performance
+php_value opcache.enable 1
+php_value opcache.memory_consumption 128
+php_value opcache.max_accelerated_files 4000
+
+# Laravel specific optimizations
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>

@@ -224,8 +224,7 @@
                 </div>
             </div>
         </template>
-    <script src="/js/po-edit.js"></script>
-        <script src="/js/po-edit-extras.js"></script>
+    @vite(['resources/js/pages/po-edit.js', 'resources/js/pages/po-edit-extras.js'])
     </form>
 @endsection
 

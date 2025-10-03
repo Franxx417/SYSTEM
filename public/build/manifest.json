@@ -7,10 +7,143 @@
       "app.css"
     ]
   },
+  "resources/css/components/custom.css": {
+    "file": "assets/custom-DzIlw-pe.css",
+    "src": "resources/css/components/custom.css",
+    "isEntry": true,
+    "names": [
+      "custom.css"
+    ]
+  },
+  "resources/css/pages/superadmin-dashboard.css": {
+    "file": "assets/superadmin-dashboard-DygWxrX7.css",
+    "src": "resources/css/pages/superadmin-dashboard.css",
+    "isEntry": true,
+    "names": [
+      "superadmin-dashboard.css"
+    ]
+  },
   "resources/js/app.js": {
-    "file": "assets/app-BDfWdM7D.js",
+    "file": "assets/app-B15b3ncE.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "resources/js/bootstrap.js"
+    ]
+  },
+  "resources/js/bootstrap.js": {
+    "file": "assets/bootstrap-CFryQBuY.js",
+    "name": "bootstrap",
+    "src": "resources/js/bootstrap.js",
+    "isEntry": true
+  },
+  "resources/js/components/modal-manager.js": {
+    "file": "assets/modal-manager-Dp80UsUY.js",
+    "name": "modal-manager",
+    "src": "resources/js/components/modal-manager.js",
+    "isEntry": true
+  },
+  "resources/js/components/status-management.js": {
+    "file": "assets/status-management-BY1_T0F_.js",
+    "name": "status-management",
+    "src": "resources/js/components/status-management.js",
+    "isEntry": true
+  },
+  "resources/js/components/status-sync.js": {
+    "file": "assets/status-sync-DG63Rzaj.js",
+    "name": "status-sync",
+    "src": "resources/js/components/status-sync.js",
+    "isEntry": true
+  },
+  "resources/js/dashboards/requestor-dashboard.js": {
+    "file": "assets/requestor-dashboard-CMjpvHx-.js",
+    "name": "requestor-dashboard",
+    "src": "resources/js/dashboards/requestor-dashboard.js",
+    "isEntry": true
+  },
+  "resources/js/dashboards/superadmin-dashboard-enhanced.js": {
+    "file": "assets/superadmin-dashboard-enhanced-Dr91OaFR.js",
+    "name": "superadmin-dashboard-enhanced",
+    "src": "resources/js/dashboards/superadmin-dashboard-enhanced.js",
+    "isEntry": true
+  },
+  "resources/js/dashboards/superadmin-dashboard.js": {
+    "file": "assets/superadmin-dashboard-BaOhgRb4.js",
+    "name": "superadmin-dashboard",
+    "src": "resources/js/dashboards/superadmin-dashboard.js",
+    "isEntry": true
+  },
+  "resources/js/pages/admin-users-index.js": {
+    "file": "assets/admin-users-index-DmEud93S.js",
+    "name": "admin-users-index",
+    "src": "resources/js/pages/admin-users-index.js",
+    "isEntry": true
+  },
+  "resources/js/pages/items-create.js": {
+    "file": "assets/items-create-BsjHpSP2.js",
+    "name": "items-create",
+    "src": "resources/js/pages/items-create.js",
+    "isEntry": true
+  },
+  "resources/js/pages/items-edit.js": {
+    "file": "assets/items-edit-BsjHpSP2.js",
+    "name": "items-edit",
+    "src": "resources/js/pages/items-edit.js",
+    "isEntry": true
+  },
+  "resources/js/pages/items-index.js": {
+    "file": "assets/items-index-KaNt4roX.js",
+    "name": "items-index",
+    "src": "resources/js/pages/items-index.js",
+    "isEntry": true
+  },
+  "resources/js/pages/po-create.js": {
+    "file": "assets/po-create-BAivhVNd.js",
+    "name": "po-create",
+    "src": "resources/js/pages/po-create.js",
+    "isEntry": true
+  },
+  "resources/js/pages/po-edit-extras.js": {
+    "file": "assets/po-edit-extras-CG6ghKvF.js",
+    "name": "po-edit-extras",
+    "src": "resources/js/pages/po-edit-extras.js",
+    "isEntry": true
+  },
+  "resources/js/pages/po-edit.js": {
+    "file": "assets/po-edit-eGj3yhvE.js",
+    "name": "po-edit",
+    "src": "resources/js/pages/po-edit.js",
+    "isEntry": true
+  },
+  "resources/js/pages/po-index.js": {
+    "file": "assets/po-index-BfX5A_h9.js",
+    "name": "po-index",
+    "src": "resources/js/pages/po-index.js",
+    "isEntry": true
+  },
+  "resources/js/pages/po-print.js": {
+    "file": "assets/po-print-D-nbQjmd.js",
+    "name": "po-print",
+    "src": "resources/js/pages/po-print.js",
+    "isEntry": true
+  },
+  "resources/js/pages/suppliers-index.js": {
+    "file": "assets/suppliers-index-VSooaadI.js",
+    "name": "suppliers-index",
+    "src": "resources/js/pages/suppliers-index.js",
+    "isEntry": true
+  },
+  "resources/js/po-create.js": {
+    "file": "assets/po-create-Dj9X9FXB.js",
+    "name": "po-create",
+    "src": "resources/js/po-create.js",
+    "isEntry": true
+  },
+  "resources/js/po-form.js": {
+    "file": "assets/po-form-l0sNRNKZ.js",
+    "name": "po-form",
+    "src": "resources/js/po-form.js",
     "isEntry": true
   }
 }

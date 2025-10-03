@@ -4,7 +4,11 @@
 @section('page_subheading','Manage suppliers')
 @section('content')
     <!-- Suppliers list; Authorized Personnel can add new ones -->
-    <div class="d-flex justify-content-end mb-2"><a class="btn btn-primary" href="{{ route('suppliers.create') }}">Add Supplier</a></div>
+    <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i class="fas fa-plus me-1"></i>Add Supplier
+        </button>
+    </div>
     <div class="card"><div class="card-body p-0">
         <table class="table mb-0">
             <thead><tr><th>Name</th><th>VAT Type</th><th>Contact</th><th class="text-end">Actions</th></tr></thead>
@@ -36,6 +40,59 @@
         </table>
     </div></div>
     <div class="mt-2">{{ $suppliers->links() }}</div>
+
+    <!-- Add Supplier Modal -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addSupplierForm" method="POST" action="{{ route('suppliers.store') }}">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                <input class="form-control" name="name" required maxlength="255" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">VAT Type</label>
+                                <select class="form-select" name="vat_type">
+                                    <option value="">-- None --</option>
+                                    <option value="VAT">VAT</option>
+                                    <option value="Non-VAT">Non-VAT</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-control" name="address" rows="2" maxlength="500" placeholder="Enter supplier address"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Person</label>
+                                <input class="form-control" name="contact_person" maxlength="100" placeholder="Contact person name" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Number</label>
+                                <input class="form-control" name="contact_number" maxlength="20" placeholder="Phone number" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">TIN No.</label>
+                                <input class="form-control" name="tin_no" maxlength="20" placeholder="Tax identification number" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Create Supplier
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit Supplier Modal -->
     <div class="modal fade" id="editSupplierModal" tabindex="-1">
@@ -125,7 +182,7 @@
         </div>
     </div>
 
-    <script src="/js/suppliers-index.js"></script>
+    @vite(['resources/js/pages/suppliers-index.js'])
 @endsection
 
 

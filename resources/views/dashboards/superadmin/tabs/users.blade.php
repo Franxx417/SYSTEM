@@ -7,12 +7,12 @@
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" id="user-search" class="form-control form-control-sm" 
                            placeholder="Search users..." style="width: 200px;">
-                    <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.users.index') }}">
-                        <i class="fas fa-list me-1"></i>View All
-                    </a>
-                    <a class="btn btn-sm btn-primary" href="{{ route('admin.users.create') }}">
+                    <button class="btn btn-sm btn-outline-success" onclick="refreshUserList()">
+                        <i class="fas fa-sync me-1"></i>Refresh
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="showAddUserModal()">
                         <i class="fas fa-plus me-1"></i>Add User
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -148,74 +148,53 @@
         </div>
     </div>
     <div class="col-lg-4">
+        <!-- Role Distribution -->
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-user-plus me-2"></i>Quick User Actions</h6>
-            </div>
-            <div class="card-body">
-                <form id="quick-user-form" data-validate>
-                    @csrf
-                    <input type="hidden" name="action" value="create_user" />
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input class="form-control form-control-sm" name="username" required />
-                        <div class="form-text">Unique username for login</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input class="form-control form-control-sm" name="name" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control form-control-sm" name="email" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Role</label>
-                        <select class="form-select form-select-sm" name="role" required>
-                            <option value="">Select Role</option>
-                            <option value="requestor">Requestor</option>
-                            <option value="superadmin">Superadmin</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control form-control-sm" name="password" required minlength="6" />
-                        <div class="form-text">Minimum 6 characters</div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">
-                        <i class="fas fa-plus me-1"></i>Create User
-                    </button>
-                </form>
-            </div>
-        </div>
-        <div class="card border-0 shadow-sm">
             <div class="card-header">
                 <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Role Distribution</h6>
             </div>
             <div class="card-body">
                 @php
                     $stats = $userStats ?? [];
-                    $onlyTwo = ['requestor','superadmin'];
                     $displayStats = [];
-                    foreach ($onlyTwo as $r) { $displayStats[$r] = (int)($stats[$r] ?? 0); }
-                    if (array_sum($displayStats) === 0 && \Illuminate\Support\Facades\Schema::hasTable('users')) {
+                    
+                    // If userStats provided by controller, use it
+                    if (!empty($stats)) {
+                        $displayStats = $stats;
+                    } else {
+                        // Fallback: calculate from database
                         try {
-                            $displayStats = \Illuminate\Support\Facades\DB::table('users')
-                                ->select('role', \Illuminate\Support\Facades\DB::raw('COUNT(*) as c'))
-                                ->whereIn('role', $onlyTwo)
-                                ->groupBy('role')
-                                ->pluck('c','role')->toArray();
-                            foreach ($onlyTwo as $r) { $displayStats[$r] = (int)($displayStats[$r] ?? 0); }
-                        } catch (\Throwable $e) { $displayStats = ['requestor'=>0,'superadmin'=>0]; }
+                            if (\Illuminate\Support\Facades\Schema::hasTable('users') && 
+                                \Illuminate\Support\Facades\Schema::hasTable('roles') && 
+                                \Illuminate\Support\Facades\Schema::hasTable('role_types')) {
+                                $displayStats = \Illuminate\Support\Facades\DB::table('users')
+                                    ->leftJoin('roles', 'roles.user_id', '=', 'users.user_id')
+                                    ->leftJoin('role_types', 'role_types.role_type_id', '=', 'roles.role_type_id')
+                                    ->select('role_types.user_role_type as role', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT users.user_id) as count'))
+                                    ->whereNotNull('role_types.user_role_type')
+                                    ->groupBy('role_types.user_role_type')
+                                    ->pluck('count', 'role')
+                                    ->toArray();
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+                    
+                    // Ensure we always show requestor and superadmin
+                    if (empty($displayStats)) {
+                        $displayStats = ['requestor' => 0, 'superadmin' => 0];
                     }
                 @endphp
-                @foreach($displayStats as $role => $count)
+                @forelse($displayStats as $role => $count)
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="text-capitalize">{{ str_replace('_', ' ', $role) }}</span>
                         <span class="badge bg-primary">{{ $count }}</span>
                     </div>
-                @endforeach
+                @empty
+                    <p class="text-muted text-center">No role data available</p>
+                @endforelse
             </div>
         </div>
+
+        
     </div>
 </div>
