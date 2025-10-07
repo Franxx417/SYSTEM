@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/js/components/modal-manager.js',
                 'resources/js/components/status-sync.js',
                 'resources/js/components/status-management.js',
+                'resources/js/status-color-sync.js',
                 
                 // Dashboard JS
                 'resources/js/dashboards/requestor-dashboard.js',
@@ -37,7 +38,6 @@ export default defineConfig({
                 'resources/js/pages/admin-users-index.js',
                 
                 // Legacy files (to be refactored)
-                'resources/js/po-create.js',
                 'resources/js/po-form.js',
             ],
             refresh: true,

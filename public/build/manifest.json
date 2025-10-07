@@ -99,7 +99,7 @@
     "isEntry": true
   },
   "resources/js/pages/po-create.js": {
-    "file": "assets/po-create-BAivhVNd.js",
+    "file": "assets/po-create-CDs8huId.js",
     "name": "po-create",
     "src": "resources/js/pages/po-create.js",
     "isEntry": true
@@ -134,16 +134,16 @@
     "src": "resources/js/pages/suppliers-index.js",
     "isEntry": true
   },
-  "resources/js/po-create.js": {
-    "file": "assets/po-create-Dj9X9FXB.js",
-    "name": "po-create",
-    "src": "resources/js/po-create.js",
-    "isEntry": true
-  },
   "resources/js/po-form.js": {
     "file": "assets/po-form-l0sNRNKZ.js",
     "name": "po-form",
     "src": "resources/js/po-form.js",
+    "isEntry": true
+  },
+  "resources/js/status-color-sync.js": {
+    "file": "assets/status-color-sync-DcoSHV44.js",
+    "name": "status-color-sync",
+    "src": "resources/js/status-color-sync.js",
     "isEntry": true
   }
 }

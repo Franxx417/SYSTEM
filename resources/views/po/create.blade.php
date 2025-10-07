@@ -2,13 +2,12 @@
 @section('title','Create Purchase Order')
 @section('page_heading','Create Purchase Order')
 @section('page_subheading','Fill in supplier, items, and totals')
+
+@push('styles')
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+@endpush
+
 @section('content')
-    <!-- Use the exact CDNs you added (kept as requested) -->
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-    @vite(['resources/js/pages/po-create.js'])
     <!-- PO create form: supplier, dates, items, and realtime totals -->
     <form method="POST" action="{{ route('po.store') }}" id="poForm" data-next-number-url="{{ route('po.next_number') }}" data-latest-price-url="{{ route('api.items.latest_price') }}">
         @csrf
@@ -90,11 +89,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Date Requested</label>
-                            <input id = "date-from" type="text" name="date_requested" required autocomplete="off" />
+                            <input id="date-from" class="form-control" type="text" name="date_requested" required autocomplete="off" />
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Delivery Date</label>
-                            <input id="date-to" class="datte" type="text" name="delivery_date" required autocomplete="off" />
+                            <input id="date-to" class="form-control" type="text" name="delivery_date" required autocomplete="off" />
                         </div>
                         <div id="result" class="text-muted small mt-2"></div>
                     </div>
@@ -104,19 +103,19 @@
     <div class="card"><div class="card-body">
         <div class="d-flex justify-content-between">
             <span class="text-muted">Shipping</span>
-            <input class="form-control text-end w-50" id="calc-shipping-input" type="number only" min="0" placeholder="0.00"  />
+            <input class="form-control text-end w-50 number-only-input" id="calc-shipping-input" type="text" min="0" step="0.01" placeholder="0.00" />
         </div>
         <div class="d-flex justify-content-between mt-2">
             <span class="text-muted">Discount</span>
-            <input class="form-control text-end w-50" id="calc-discount-input" type="number only" min="0" placeholder="0.00"  />
+            <input class="form-control text-end w-50 number-only-input" id="calc-discount-input" type="text" min="0" step="0.01" placeholder="0.00" />
         </div>
         <div class="d-flex justify-content-between mt-3">
     <span class="text-muted">Vatable Sales (Ex Vat)</span>
-    <input class="form-control text-end w-50" id="calc-subtotal" type="text" placeholder="0"  required autocomplete="off" />
+    <input class="form-control text-end w-50 number-only-input" id="calc-subtotal" type="text" placeholder="0" readonly />
 </div>
 <div class="d-flex justify-content-between">
     <span class="text-muted">12% Vat</span>
-    <input class="form-control text-end w-50" id="calc-vat" type="text" placeholder="0"  required autocomplete="off" >
+    <input class="form-control text-end w-50 number-only-input" id="calc-vat" type="text" placeholder="0" readonly >
         </div>
         <hr>
         <div class="d-flex justify-content-between fw-semibold">
@@ -177,6 +176,73 @@
             </div>
         </div>
     </template>
-    
 @endsection
+
+@push('scripts')
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script>
+        // Simple direct approach - initialize immediately
+        jQuery(function($) {
+            console.log('Initializing datepickers...');
+            
+            var $from = $('#date-from');
+            var $to = $('#date-to');
+            
+            if ($from.length && $to.length) {
+                $from.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $to.datepicker('option', 'minDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                $to.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $from.datepicker('option', 'maxDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                function updateDateInfo() {
+                    var fromVal = $from.val();
+                    var toVal = $to.val();
+                    var $result = $('#result');
+                    if (fromVal && toVal) {
+                        var fromDate = new Date(fromVal);
+                        var toDate = new Date(toVal);
+                        var diffTime = Math.abs(toDate - fromDate);
+                        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        $result.text('Delivery period: ' + diffDays + ' days');
+                    } else {
+                        $result.text('');
+                    }
+                }
+                
+                console.log('Datepickers initialized successfully!');
+            }
+            
+            // Purpose counter
+            var $purpose = $('#purpose-input');
+            var $count = $('#text-count');
+            var maxLen = $purpose.attr('maxlength');
+            if ($purpose.length && $count.length && maxLen) {
+                function updateCounter() {
+                    var rem = maxLen - $purpose.val().length;
+                    $count.text(rem + ' characters remaining');
+                    $count.toggleClass('text-danger', rem <= 20).toggleClass('text-muted', rem > 20);
+                }
+                updateCounter();
+                $purpose.on('input', updateCounter);
+            }
+        });
+    </script>
+    @vite(['resources/js/pages/po-create.js'])
+@endpush
 

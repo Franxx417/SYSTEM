@@ -256,20 +256,35 @@
                             <div class="text-muted">@yield('page_subheading','Overview')</div>
                         </div>
                     </div>
-                    <div class="d-none d-lg-block text-end">
-                        <div class="fw-semibold">{{ $auth['name'] ?? '' }}</div>
-                        <div class="text-muted small">{{ $auth['department'] ?? '' }}</div>
-                        @if($auth && $auth['role'] === 'superadmin')
-                            <div class="badge bg-danger small">SUPERADMIN - UNRESTRICTED ACCESS</div>
-                        @endif
+                    <div class="d-none d-lg-block">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="text-end">
+                                <div class="fw-semibold">{{ $auth['name'] ?? '' }}</div>
+                                <div class="text-muted small">{{ $auth['department'] ?? '' }}</div>
+                                @if($auth && $auth['role'] === 'superadmin')
+                                    <div class="badge bg-danger small">SUPERADMIN - UNRESTRICTED ACCESS</div>
+                                @endif
+                            </div>
+                            @if(isset($auth['profile_photo']) && $auth['profile_photo'])
+                                <img src="{{ $auth['profile_photo'] }}" alt="Profile" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #dee2e6;">
+                            @else
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.2rem; font-weight: 600; border: 2px solid #dee2e6;">
+                                    {{ strtoupper(substr($auth['name'] ?? 'U', 0, 1)) }}
+                                </div>
+                            @endif
+                        </div>
                     </div>
                     <!-- Mobile user info -->
                     <div class="d-lg-none">
                         <div class="dropdown">
                             <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="dropdown">
-                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
-                                    {{ strtoupper(substr($auth['name'] ?? 'U', 0, 1)) }}
-                                </div>
+                                @if(isset($auth['profile_photo']) && $auth['profile_photo'])
+                                    <img src="{{ $auth['profile_photo'] }}" alt="Profile" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid #dee2e6;">
+                                @else
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        {{ strtoupper(substr($auth['name'] ?? 'U', 0, 1)) }}
+                                    </div>
+                                @endif
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><h6 class="dropdown-header">{{ $auth['name'] ?? '' }}</h6></li>

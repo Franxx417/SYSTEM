@@ -47,7 +47,7 @@
                         @endforeach
                     </ul>
                 </div>
-                <a class="btn btn-primary w-100 mt-3" href="{{ route('po.create') }}">Create Purchase Order</a>
+                <a class="btn btn-primary w-100 mt-3" href="{{ route('po.create') }}?new=1">Create Purchase Order</a>
             </div>
         </div>
         @vite(['resources/js/dashboards/requestor-dashboard.js'])

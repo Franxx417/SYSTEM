@@ -12,6 +12,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemsController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StatusController;
 
 Route::get('/post/create', [App\Http\Controllers\PostController::class, 'create']);
 Route::post('/post', [App\Http\Controllers\PostController::class, 'store']);

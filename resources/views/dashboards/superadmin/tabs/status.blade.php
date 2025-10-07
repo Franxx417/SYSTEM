@@ -138,6 +138,7 @@
     </div>
 </div>
 
+@vite(['resources/js/status-color-sync.js'])
 <script>
 // Quick status color change
 document.addEventListener('change', function(e) {
@@ -162,35 +163,60 @@ document.addEventListener('change', function(e) {
     }
 });
 
+// Listen for color changes from Advanced Status Management
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.statusColorSync) {
+        window.statusColorSync.onColorChange(function(data) {
+            console.log('Quick interface received color change:', data);
+            
+            // Update color pickers
+            document.querySelectorAll('.status-color-quick').forEach(picker => {
+                if (picker.dataset.status === data.statusName) {
+                    picker.value = data.color;
+                }
+            });
+            
+            // Update all visual indicators
+            window.statusColorSync.updatePageIndicators(data.statusName, data.color);
+            
+            // Show notification
+            showQuickNotification(`Status "${data.statusName}" color synced from Advanced Settings`, 'success');
+        });
+    }
+});
+
 function saveStatusColorQuick(statusName, color) {
-    // Get current status config
-    fetch('{{ route("admin.status.config") }}', {
+    // First get the status ID from the database
+    fetch('/admin/status/config', {
         method: 'GET',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         }
     })
     .then(response => response.json())
-    .then(config => {
-        const statusConfig = config.status_colors[statusName] || {};
-        statusConfig.color = color;
+    .then(data => {
+        // Find the status by name to get its ID
+        const statuses = data.config?.statuses || [];
+        const status = statuses.find(s => s.name === statusName);
         
-        // Generate CSS class name if not exists
-        if (!statusConfig.css_class) {
-            statusConfig.css_class = 'status-' + statusName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        if (!status) {
+            throw new Error('Status not found');
         }
         
-        // Update status
-        return fetch('{{ route("admin.status.config.update") }}', {
+        const statusId = status.id;
+        
+        // Update color in database using the unified endpoint
+        return fetch(`/admin/status/${statusId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             body: JSON.stringify({
-                action: 'update_color',
-                status_id: statusName, // This should be the actual status ID, not name
-                color: color
+                _method: 'PUT',
+                status_name: statusName,
+                color: color,
+                description: status.description || ''
             })
         });
     })
@@ -198,13 +224,29 @@ function saveStatusColorQuick(statusName, color) {
     .then(data => {
         if (data.success) {
             showQuickNotification('Status color updated successfully', 'success');
+            
+            // Broadcast to other interfaces using sync system
+            if (window.statusColorSync) {
+                // Find status ID by name from database
+                fetch('/admin/status/config', {
+                    method: 'GET'
+                })
+                .then(r => r.json())
+                .then(configData => {
+                    const statuses = configData.config?.statuses || [];
+                    const status = statuses.find(s => s.name === statusName);
+                    if (status) {
+                        window.statusColorSync.notifyColorChange(status.id, statusName, color);
+                    }
+                });
+            }
         } else {
             showQuickNotification('Failed to update status color', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showQuickNotification('Error updating status color', 'error');
+        showQuickNotification('Error updating status color: ' + error.message, 'error');
     });
 }
 

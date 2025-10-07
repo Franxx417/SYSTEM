@@ -5,7 +5,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Purchase Orders Management</h6>
                 <div class="d-flex gap-2 align-items-center">
-                    <button class="btn btn-sm btn-primary" onclick="window.location.href='{{ route('po.create') }}'">
+                    <button class="btn btn-sm btn-primary" onclick="window.location.href='{{ route('po.create') }}?new=1'">
                         <i class="fas fa-plus me-1"></i>New PO
                     </button>
                 </div>

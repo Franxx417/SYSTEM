@@ -242,13 +242,39 @@ document.addEventListener('DOMContentLoaded', () => {
   if (shippingInput) shippingInput.addEventListener('input', recalcTotals);
   if (discountInput) discountInput.addEventListener('input', recalcTotals);
 
-  if (tpl && items) {
-    addRow();
-    recalcTotals();
-  }
+  // This will be handled by initializeForm() function
 
   // --- Draft persistence (localStorage) ---
   const DRAFT_KEY = 'po_create_draft_v1';
+  const SESSION_KEY = 'po_create_session_id';
+  
+  // Generate a unique session ID for this form creation session
+  function generateSessionId() {
+    return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+  
+  // Check if this is a fresh form creation or a page refresh
+  function isFreshFormCreation() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSessionId = sessionStorage.getItem(SESSION_KEY);
+    
+    // If there's a 'new' parameter or no session ID exists, it's a fresh creation
+    if (urlParams.has('new') || !currentSessionId) {
+      return true;
+    }
+    
+    // Check if we're coming from a different page (referrer check)
+    const referrer = document.referrer;
+    const currentPath = window.location.pathname;
+    
+    // If referrer doesn't contain the current path, it's likely a fresh creation
+    if (referrer && !referrer.includes(currentPath)) {
+      return true;
+    }
+    
+    return false;
+  }
+  
   function serializeForm(){
     const data = {
       supplier_id: supplierSelect ? supplierSelect.value : '',
@@ -263,6 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
       purpose: document.getElementById('purpose-input')?.value || '',
       date_requested: document.getElementById('date-from')?.value || '',
       delivery_date: document.getElementById('date-to')?.value || '',
+      shipping: document.getElementById('calc-shipping-input')?.value || '',
+      discount: document.getElementById('calc-discount-input')?.value || '',
       items: []
     };
     document.querySelectorAll('#items .item-row').forEach(row => {
@@ -279,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     return data;
   }
+  
   function restoreForm(data){
     try{
       if (!data) return;
@@ -294,6 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
       set('purpose-input', data.purpose);
       set('date-from', data.date_requested);
       set('date-to', data.delivery_date);
+      set('calc-shipping-input', data.shipping);
+      set('calc-discount-input', data.discount);
       // rebuild items
       if (items){ items.innerHTML = ''; idx = 0; }
       (data.items || []).forEach(it => {
@@ -319,50 +350,119 @@ document.addEventListener('DOMContentLoaded', () => {
       recalcTotals();
     }catch{}
   }
-  function saveDraft(){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(serializeForm())); }catch{} }
-  function loadDraft(){ try{ const raw = localStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; }catch{ return null; } }
-  function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
+  
+  function saveDraft(){ 
+    try{ 
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(serializeForm())); 
+      // Also save a timestamp to track when the draft was last updated
+      localStorage.setItem(DRAFT_KEY + '_timestamp', Date.now().toString());
+    }catch{} 
+  }
+  
+  function loadDraft(){ 
+    try{ 
+      const raw = localStorage.getItem(DRAFT_KEY); 
+      return raw ? JSON.parse(raw) : null; 
+    }catch{ 
+      return null; 
+    } 
+  }
+  
+  function clearDraft(){ 
+    try{ 
+      localStorage.removeItem(DRAFT_KEY); 
+      localStorage.removeItem(DRAFT_KEY + '_timestamp');
+      sessionStorage.removeItem(SESSION_KEY);
+    }catch{} 
+  }
+  
+  // Initialize form based on whether it's a fresh creation or refresh
+  function initializeForm() {
+    if (isFreshFormCreation()) {
+      // Fresh form creation - clear any existing draft and start clean
+      clearDraft();
+      // Generate new session ID
+      sessionStorage.setItem(SESSION_KEY, generateSessionId());
+      console.log('Fresh form creation - starting with empty form');
+      
+      // Add initial empty item row for fresh forms
+      if (tpl && items) {
+        addRow();
+        recalcTotals();
+      }
+    } else {
+      // Page refresh - restore from draft if available
+      const draftData = loadDraft();
+      if (draftData) {
+        console.log('Page refresh detected - restoring form data');
+        restoreForm(draftData);
+      } else {
+        // No draft data but not a fresh creation - add default row
+        if (tpl && items) {
+          addRow();
+          recalcTotals();
+        }
+      }
+    }
+  }
+  
   // Save on changes
   formEl.addEventListener('input', saveDraft);
   formEl.addEventListener('change', saveDraft);
-  // Restore on load
-  restoreForm(loadDraft());
+  
+  // Initialize the form
+  initializeForm();
+  
   // Clear on successful submit (let server redirect first; best effort)
   formEl.addEventListener('submit', ()=>{ clearDraft(); });
 });
 
-// jQuery-only helpers used on the page
-if (typeof window !== 'undefined' && window.jQuery) {
-  jQuery(function($){
-    const $from = $('#date-from'); const $to = $('#date-to');
-    if ($from.length && $to.length) {
-      $from.datepicker({ dateFormat: 'yy-mm-dd', onSelect: d => { $to.datepicker('option','minDate', d); updateDateInfo(); } });
-      $to.datepicker({ dateFormat: 'yy-mm-dd', onSelect: d => { $from.datepicker('option','maxDate', d); updateDateInfo(); } });
+// Number-only validation for financial inputs
+function enforcePositiveNumberOnly(input) {
+  input.addEventListener('input', function(e) {
+    let value = this.value;
+    // Remove any non-numeric characters except decimal point
+    value = value.replace(/[^0-9.]/g, '');
+    // Only allow one decimal point
+    const parts = value.split('.');
+    if (parts.length > 2) {
+      value = parts[0] + '.' + parts.slice(1).join('');
     }
-    
-    function updateDateInfo() {
-      const fromVal = $from.val();
-      const toVal = $to.val();
-      const $result = $('#result');
-      if (fromVal && toVal) {
-        const fromDate = new Date(fromVal);
-        const toDate = new Date(toVal);
-        const diffTime = Math.abs(toDate - fromDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        $result.text(`Delivery period: ${diffDays} days`);
-      } else {
-        $result.text('');
+    // Ensure non-negative
+    const num = parseFloat(value);
+    if (num < 0 || isNaN(num)) {
+      value = '';
+    }
+    this.value = value;
+  });
+  
+  input.addEventListener('blur', function() {
+    if (this.value === '' || this.value === '.') {
+      this.value = '0.00';
+    } else {
+      const num = parseFloat(this.value);
+      this.value = isNaN(num) ? '0.00' : num.toFixed(2);
+    }
+  });
+  
+  // Prevent negative numbers on paste
+  input.addEventListener('paste', function(e) {
+    setTimeout(() => {
+      let value = this.value.replace(/[^0-9.]/g, '');
+      const num = parseFloat(value);
+      if (num < 0 || isNaN(num)) {
+        this.value = '0.00';
       }
-    }
-    const $purpose = $('#purpose-input'); const $count = $('#text-count'); const maxLen = $purpose.attr('maxlength');
-    if ($purpose.length && $count.length && maxLen){
-      function updateCounter(){ const rem = maxLen - $purpose.val().length; $count.text(rem + ' characters remaining'); $count.toggleClass('text-danger', rem<=20).toggleClass('text-muted', rem>20); }
-      updateCounter(); $purpose.on('input', updateCounter);
-    }
-    function handleNum(){ const $i=$(this); let v=$i.val().replace(/[^0-9.]/g,''); const parts=v.split('.'); if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join(''); const n=parseFloat(v); if (n<0 || isNaN(n)) v='0.00'; $i.val(v); }
-    function blurNum(){ const $i=$(this); const n=parseFloat($i.val()); $i.val(isNaN(n)?'0.00':n.toFixed(2)); }
-    $('#calc-shipping-input, #calc-discount-input').on('input', handleNum).on('blur', blurNum);
+    }, 0);
   });
 }
+
+// Apply number-only validation to all financial inputs
+document.querySelectorAll('.number-only-input:not([readonly])').forEach(input => {
+  enforcePositiveNumberOnly(input);
+});
+
+// Note: Datepickers are now initialized directly in the view file using simple jQuery
+// This keeps the main script focused on form functionality
 
 
