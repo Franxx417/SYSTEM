@@ -3,8 +3,8 @@
 @section('page_heading','Procurement Dashboard')
 @section('page_subheading','Quick overview of your operations')
 @section('content')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
-<link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
+    {{-- Bootstrap CSS & JS are loaded in layouts/app.blade.php --}}
+    <link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
         <div id="req-dashboard" data-summary-url="{{ route('api.dashboard.summary') }}" data-po-show-template="{{ route('po.show', '__po__') }}">
         <!-- Summary cards: quick metrics for the current requestor -->
         <div class="row g-3 mb-3">

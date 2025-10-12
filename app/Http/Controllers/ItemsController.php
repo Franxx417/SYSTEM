@@ -89,9 +89,61 @@ class ItemsController extends Controller
     /**
      * Show the form for creating a new item
      */
-    public function create()
+    public function create(Request $request)
     {
+        $auth = $this->requireRole($request, ['requestor', 'superadmin']);
         return view('items.create');
+    }
+    
+    /**
+     * Display inventory summary with grouped items
+     */
+    public function inventory(Request $request)
+    {
+        $auth = $this->requireRole($request, ['requestor', 'superadmin']);
+        
+        $search = $request->get('search', '');
+        
+        // Get total count of all items
+        $totalItemsCount = DB::table('items')->count();
+        
+        // Get total inventory value
+        $totalInventoryValue = DB::table('items')->sum('total_cost');
+        
+        // Group items by name and aggregate quantities and costs
+        $query = DB::table('items')
+            ->select([
+                DB::raw('COALESCE(item_name, LEFT(item_description, 50)) as item_group'),
+                'item_name',
+                'item_description',
+                DB::raw('SUM(quantity) as total_quantity'),
+                DB::raw('AVG(unit_price) as avg_unit_price'),
+                DB::raw('SUM(total_cost) as total_value'),
+                DB::raw('COUNT(*) as entry_count'),
+                DB::raw('MIN(created_at) as first_added'),
+                DB::raw('MAX(updated_at) as last_updated')
+            ])
+            ->groupBy('item_name', 'item_description');
+        
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('item_name', 'like', "%{$search}%")
+                  ->orWhere('item_description', 'like', "%{$search}%");
+            });
+        }
+        
+        $inventoryGroups = $query->orderBy('total_quantity', 'desc')->get();
+        
+        // Calculate unique item types
+        $uniqueItemTypes = $inventoryGroups->count();
+        
+        return view('items.inventory', compact(
+            'inventoryGroups',
+            'totalItemsCount',
+            'totalInventoryValue',
+            'uniqueItemTypes',
+            'search'
+        ));
     }
     
     /**
@@ -187,8 +239,10 @@ class ItemsController extends Controller
     /**
      * Show the form for editing an item
      */
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
+        $auth = $this->requireRole($request, ['requestor', 'superadmin']);
+        
         $item = DB::table('items')
             ->where('item_id', $id)
             ->first();
@@ -207,7 +261,7 @@ class ItemsController extends Controller
     {
         $auth = $this->requireRole($request, ['requestor', 'superadmin']);
         
-        $request->validate([
+        $validated = $request->validate([
             'item_name' => 'required|string|max:255',
             'item_description' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
@@ -215,15 +269,15 @@ class ItemsController extends Controller
         ]);
         
         try {
-            DB::transaction(function () use ($request, $id) {
+            DB::transaction(function () use ($validated, $id) {
                 DB::table('items')
                     ->where('item_id', $id)
                     ->update([
-                        'item_name' => $request->item_name,
-                        'item_description' => $request->item_description,
-                        'quantity' => $request->quantity,
-                        'unit_price' => $request->unit_price,
-                        'total_cost' => $request->quantity * $request->unit_price,
+                        'item_name' => $validated['item_name'],
+                        'item_description' => $validated['item_description'],
+                        'quantity' => $validated['quantity'],
+                        'unit_price' => $validated['unit_price'],
+                        'total_cost' => $validated['quantity'] * $validated['unit_price'],
                         'updated_at' => now(),
                     ]);
                 
@@ -249,7 +303,7 @@ class ItemsController extends Controller
             return redirect()->route('items.index')->with('success', 'Item updated successfully.');
             
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Failed to update item: ' . $e->getMessage()])->withInput();
+            return redirect()->route('items.index')->withErrors(['error' => 'Failed to update item: ' . $e->getMessage()]);
         }
     }
     

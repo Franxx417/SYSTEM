@@ -37,6 +37,8 @@ class PurchaseOrderController extends Controller
         }
         return $auth;
     }
+    
+
 
     /** List current user's POs with filters */
     public function index(Request $request)
@@ -462,34 +464,226 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Update PO status
+     * Delete a purchase order
+     */
+    public function destroy(Request $request, $poNo)
+    {
+        // Get authenticated user
+        $auth = $this->requireRole($request, 'requestor');
+        
+        try {
+            // Find the purchase order
+            $po = DB::table('purchase_orders')
+                ->where('purchase_order_no', $poNo)
+                ->first();
+                
+            if (!$po) {
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Purchase order not found'
+                    ], 404);
+                }
+                return redirect()->route('po.index')->with('error', 'Purchase order not found');
+            }
+            
+            // Check if user has permission to delete (must be the requestor or superadmin)
+            if ($auth['role'] !== 'superadmin' && $po->requestor_id !== $auth['user_id']) {
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You do not have permission to delete this purchase order'
+                    ], 403);
+                }
+                return redirect()->route('po.index')->with('error', 'You do not have permission to delete this purchase order');
+            }
+            
+            // Delete related records in transaction
+            DB::transaction(function () use ($po) {
+                // Delete approvals
+                DB::table('approvals')->where('purchase_order_id', $po->purchase_order_id)->delete();
+                
+                // Delete items
+                DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->delete();
+                
+                // Delete purchase order
+                DB::table('purchase_orders')->where('purchase_order_id', $po->purchase_order_id)->delete();
+            });
+            
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Purchase order deleted successfully'
+                ]);
+            }
+            
+            return redirect()->route('po.index')->with('success', 'Purchase order deleted successfully');
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to delete purchase order', [
+                'po_no' => $poNo,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete purchase order: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->route('po.index')->with('error', 'Failed to delete purchase order: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update PO status with proper synchronization and error handling
      */
     public function updateStatus(Request $request, $poNo)
     {
-        $auth = $this->requireRole($request, 'requestor');
+        // Detect if AJAX request
+        $wantsJson = $request->wantsJson() || $request->ajax() || $request->expectsJson();
         
-        $request->validate([
-            'status_id' => 'required|exists:statuses,status_id',
-            'remarks' => 'nullable|string|max:255'
-        ]);
-
         try {
-            $po = DB::table('purchase_orders')->where('purchase_order_no', $poNo)->first();
-            if (!$po) {
-                return back()->withErrors(['error' => 'Purchase Order not found.']);
+            // Check authentication
+            $auth = $this->requireRole($request, 'requestor');
+            
+            // Validate input
+            $validator = \Validator::make($request->all(), [
+                'status_id' => 'required|uuid|exists:statuses,status_id',
+                'remarks' => 'nullable|string|max:500'
+            ]);
+
+            if ($validator->fails()) {
+                if ($wantsJson) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Validation failed',
+                        'errors' => $validator->errors()
+                    ], 422);
+                }
+                return back()->withErrors($validator)->withInput();
             }
 
-            DB::table('approvals')
-                ->where('purchase_order_id', $po->purchase_order_id)
-                ->update([
-                    'status_id' => $request->status_id,
-                    'remarks' => $request->remarks ?: 'Status updated',
-                    'updated_at' => now(),
+            // Start transaction for data consistency
+            DB::beginTransaction();
+
+            try {
+                // Find Purchase Order
+                $po = DB::table('purchase_orders')
+                    ->where('purchase_order_no', $poNo)
+                    ->first();
+                    
+                if (!$po) {
+                    DB::rollBack();
+                    $error = 'Purchase Order not found: ' . $poNo;
+                    \Log::warning('[PO Status Update] ' . $error);
+                    
+                    if ($wantsJson) {
+                        return response()->json([
+                            'success' => false,
+                            'error' => $error
+                        ], 404);
+                    }
+                    return back()->withErrors(['error' => $error]);
+                }
+
+                // Get status information
+                $status = DB::table('statuses')
+                    ->where('status_id', $request->status_id)
+                    ->first();
+
+                if (!$status) {
+                    DB::rollBack();
+                    $error = 'Status not found';
+                    \Log::warning('[PO Status Update] ' . $error, ['status_id' => $request->status_id]);
+                    
+                    if ($wantsJson) {
+                        return response()->json([
+                            'success' => false,
+                            'error' => $error
+                        ], 404);
+                    }
+                    return back()->withErrors(['error' => $error]);
+                }
+
+                // Update approvals table
+                $affected = DB::table('approvals')
+                    ->where('purchase_order_id', $po->purchase_order_id)
+                    ->update([
+                        'status_id' => $request->status_id,
+                        'remarks' => trim($request->remarks ?: 'Status updated via status change modal')
+                    ]);
+
+                // Verify update succeeded
+                if ($affected === 0) {
+                    // Check if approval record exists
+                    $approvalExists = DB::table('approvals')
+                        ->where('purchase_order_id', $po->purchase_order_id)
+                        ->exists();
+                    
+                    if (!$approvalExists) {
+                        // Create approval record if it doesn't exist
+                        DB::table('approvals')->insert([
+                            'approval_id' => (string) \Str::uuid(),
+                            'purchase_order_id' => $po->purchase_order_id,
+                            'status_id' => $request->status_id,
+                            'remarks' => trim($request->remarks ?: 'Status updated via status change modal'),
+                            'prepared_at' => now()
+                        ]);
+                        
+                        \Log::info('[PO Status Update] Created approval record', [
+                            'po_no' => $poNo,
+                            'status' => $status->status_name
+                        ]);
+                    }
+                }
+
+                // Commit transaction
+                DB::commit();
+
+                // Log successful update
+                \Log::info('[PO Status Update] Success', [
+                    'po_no' => $poNo,
+                    'old_status' => $po->status ?? 'N/A',
+                    'new_status' => $status->status_name,
+                    'updated_by' => $auth['user_id'],
+                    'remarks' => $request->remarks
                 ]);
 
-            return back()->with('success', 'PO status updated successfully.');
+                if ($wantsJson) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'PO status updated successfully',
+                        'data' => [
+                            'po_no' => $poNo,
+                            'status_name' => $status->status_name,
+                            'updated_at' => now()->toIso8601String()
+                        ]
+                    ], 200);
+                }
+
+                return back()->with('success', 'PO status updated successfully to ' . $status->status_name);
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
             
         } catch (\Exception $e) {
+            \Log::error('[PO Status Update] Failed', [
+                'po_no' => $poNo,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if ($wantsJson) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to update status: ' . $e->getMessage()
+                ], 500);
+            }
             return back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }

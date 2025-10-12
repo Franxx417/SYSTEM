@@ -251,18 +251,198 @@ document.addEventListener('DOMContentLoaded', function(){
     window.poEditRecalcTotals = recalcTotals;
   } catch (_) {}
 
+  // --- Draft persistence (localStorage) for edit modal ---
+  const EDIT_DRAFT_KEY = 'po_edit_draft_v1';
+  const EDIT_SESSION_KEY = 'po_edit_session_id';
+  
+  function generateSessionId() {
+    return Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+  
+  function serializeEditForm(){
+    const data = {
+      supplier_id: supplierSelect ? supplierSelect.value : '',
+      new_supplier: {
+        name: document.getElementById('supplier-name')?.value || '',
+        vat_type: document.getElementById('supplier-vat-type')?.value || '',
+        address: document.getElementById('supplier-address')?.value || '',
+        contact_person: document.getElementById('supplier-contact-person')?.value || '',
+        contact_number: document.getElementById('supplier-contact-number')?.value || '',
+        tin_no: document.getElementById('supplier-tin')?.value || ''
+      },
+      purpose: document.getElementById('purpose-input')?.value || '',
+      date_requested: document.getElementById('date-from')?.value || '',
+      delivery_date: document.getElementById('date-to')?.value || '',
+      shipping: document.getElementById('calc-shipping-input')?.value || '',
+      discount: document.getElementById('calc-discount-input')?.value || '',
+      items: []
+    };
+    document.querySelectorAll('#items .item-row').forEach(row => {
+      const nameSelect = row.querySelector('.item-name-select');
+      const nameManual = row.querySelector('.item-name-manual');
+      const manualVisible = nameManual && !nameManual.classList.contains('d-none');
+      const item_name = manualVisible ? (nameManual.value || '') : (nameSelect ? nameSelect.value : '');
+      data.items.push({
+        item_name,
+        item_description: row.querySelector('.item-desc-manual')?.value || '',
+        quantity: row.querySelector('input[name$="[quantity]"]')?.value || '',
+        unit_price: row.querySelector('.unit-price')?.value || ''
+      });
+    });
+    return data;
+  }
+  
+  function restoreEditForm(data){
+    try{
+      if (!data) return;
+      if (supplierSelect && data.supplier_id){ supplierSelect.value = data.supplier_id; supplierSelect.dispatchEvent(new Event('change')); }
+      const ns = data.new_supplier || {};
+      const set = (id,val)=>{ const el=document.getElementById(id); if (el){ el.value = val || ''; el.dispatchEvent(new Event('input')); } };
+      set('supplier-name', ns.name);
+      set('supplier-vat-type', ns.vat_type);
+      set('supplier-address', ns.address);
+      set('supplier-contact-person', ns.contact_person);
+      set('supplier-contact-number', ns.contact_number);
+      set('supplier-tin', ns.tin_no);
+      set('purpose-input', data.purpose);
+      set('date-from', data.date_requested);
+      set('date-to', data.delivery_date);
+      set('calc-shipping-input', data.shipping);
+      set('calc-discount-input', data.discount);
+      // rebuild items
+      if (items){ items.innerHTML = ''; idx = 0; }
+      (data.items || []).forEach(it => {
+        addRow();
+        const row = items.lastElementChild;
+        const nameSelect = row.querySelector('.item-name-select');
+        const nameManual = row.querySelector('.item-name-manual');
+        if (nameSelect){
+          if (it.item_name === '__manual__' || (nameManual && it.item_name && !Array.from(nameSelect.options).some(o=>o.value===it.item_name))) {
+            // manual value
+            nameSelect.value = '__manual__';
+            nameSelect.dispatchEvent(new Event('change'));
+            if (nameManual){ nameManual.value = it.item_name; }
+          } else {
+            nameSelect.value = it.item_name || '';
+            nameSelect.dispatchEvent(new Event('change'));
+          }
+        }
+        const desc = row.querySelector('.item-desc-manual'); if (desc){ desc.value = it.item_description || ''; desc.dispatchEvent(new Event('input')); }
+        const qty = row.querySelector('input[name$="[quantity]"]'); if (qty){ qty.value = it.quantity || ''; qty.dispatchEvent(new Event('input')); }
+        const price = row.querySelector('.unit-price'); if (price){ price.value = it.unit_price || ''; price.dispatchEvent(new Event('input')); }
+      });
+      recalcTotals();
+    }catch{}
+  }
+  
+  function saveEditDraft(){ 
+    try{ 
+      localStorage.setItem(EDIT_DRAFT_KEY, JSON.stringify(serializeEditForm())); 
+      localStorage.setItem(EDIT_DRAFT_KEY + '_timestamp', Date.now().toString());
+    }catch{} 
+  }
+  
+  function loadEditDraft(){ 
+    try{ 
+      const raw = localStorage.getItem(EDIT_DRAFT_KEY); 
+      return raw ? JSON.parse(raw) : null; 
+    }catch{ 
+      return null; 
+    } 
+  }
+  
+  function clearEditDraft(){ 
+    try{ 
+      localStorage.removeItem(EDIT_DRAFT_KEY); 
+      localStorage.removeItem(EDIT_DRAFT_KEY + '_timestamp');
+      sessionStorage.removeItem(EDIT_SESSION_KEY);
+    }catch{} 
+  }
+  
+  // Save on changes
+  if (formEl) {
+    formEl.addEventListener('input', saveEditDraft);
+    formEl.addEventListener('change', saveEditDraft);
+    
+    // Clear on successful submit
+    formEl.addEventListener('submit', ()=>{ clearEditDraft(); });
+  }
+  
+  // Expose edit draft functions globally for use by modal handlers
+  try {
+    window.poEditRestoreForm = restoreEditForm;
+    window.poEditLoadDraft = loadEditDraft;
+    window.poEditClearDraft = clearEditDraft;
+    window.poEditSaveDraft = saveEditDraft;
+  } catch (_) {}
+
 });
 
 // jQuery-only helpers used on the page
 if (typeof window !== 'undefined' && window.jQuery) {
   jQuery(function($){
-    const $from = $('#date-from'); const $to = $('#date-to');
-    if ($from.length && $to.length) {
-      $from.datepicker({ dateFormat: 'yy-mm-dd', onSelect: d => { $to.datepicker('option','minDate', d); updateDateInfo(); } });
-      $to.datepicker({ dateFormat: 'yy-mm-dd', onSelect: d => { $from.datepicker('option','maxDate', d); updateDateInfo(); } });
+    console.log('Initializing PO edit modal datepickers...');
+    
+    // Function to safely initialize datepickers
+    function initDatepickers() {
+      const $from = $('#date-from');
+      const $to = $('#date-to');
+      
+      console.log('Found date inputs:', $from.length, $to.length);
+      
+      if ($from.length && $to.length) {
+        // Destroy existing datepickers if any
+        if ($from.hasClass('hasDatepicker')) {
+          console.log('Destroying existing "from" datepicker');
+          $from.datepicker('destroy');
+        }
+        if ($to.hasClass('hasDatepicker')) {
+          console.log('Destroying existing "to" datepicker');
+          $to.datepicker('destroy');
+        }
+        
+        try {
+          // Initialize datepickers with enhanced options
+          $from.datepicker({
+            dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            yearRange: 'c-5:c+5',
+            onSelect: function(d) {
+              console.log('From date selected:', d);
+              $to.datepicker('option', 'minDate', d);
+              updateDateInfo();
+            }
+          });
+          
+          $to.datepicker({
+            dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            yearRange: 'c-5:c+5',
+            onSelect: function(d) {
+              console.log('To date selected:', d);
+              $from.datepicker('option', 'maxDate', d);
+              updateDateInfo();
+            }
+          });
+          
+          console.log('Datepickers initialized successfully!');
+        } catch (error) {
+          console.error('Error initializing datepickers:', error);
+          // Fallback to manual date validation
+          addManualDateValidation($from, $to);
+        }
+      } else {
+        console.warn('Date input elements not found');
+      }
     }
     
     function updateDateInfo() {
+      const $from = $('#date-from');
+      const $to = $('#date-to');
       const fromVal = $from.val();
       const toVal = $to.val();
       const $result = $('#result');
@@ -276,14 +456,144 @@ if (typeof window !== 'undefined' && window.jQuery) {
         $result.text('');
       }
     }
-    const $purpose = $('#purpose-input'); const $count = $('#text-count'); const maxLen = $purpose.attr('maxlength');
-    if ($purpose.length && $count.length && maxLen){
-      function updateCounter(){ const rem = maxLen - $purpose.val().length; $count.text(rem + ' characters remaining'); $count.toggleClass('text-danger', rem<=20).toggleClass('text-muted', rem>20); }
-      updateCounter(); $purpose.on('input', updateCounter);
+    
+    // Manual date validation fallback
+    function addManualDateValidation($from, $to) {
+      console.log('Adding manual date validation as fallback...');
+      
+      $from.on('blur', function() {
+        validateDateFormat($(this));
+      });
+      
+      $to.on('blur', function() {
+        validateDateFormat($(this));
+        validateDateRange($from, $to);
+      });
+      
+      $from.on('input', function() {
+        validateDateRange($from, $to);
+      });
+      
+      function validateDateFormat($input) {
+        const dateStr = $input.val();
+        if (dateStr) {
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+          if (!dateRegex.test(dateStr)) {
+            $input.addClass('is-invalid');
+            if (!$input.next('.invalid-feedback').length) {
+              $input.after('<div class="invalid-feedback">Please use YYYY-MM-DD format</div>');
+            }
+          } else {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+              $input.addClass('is-invalid');
+              if (!$input.next('.invalid-feedback').length) {
+                $input.after('<div class="invalid-feedback">Please enter a valid date</div>');
+              }
+            } else {
+              $input.removeClass('is-invalid');
+              $input.next('.invalid-feedback').remove();
+            }
+          }
+        }
+      }
+      
+      function validateDateRange($from, $to) {
+        const fromDate = new Date($from.val());
+        const toDate = new Date($to.val());
+        
+        if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+          if (fromDate > toDate) {
+            $to.addClass('is-invalid');
+            if (!$to.next('.invalid-feedback').length) {
+              $to.after('<div class="invalid-feedback">Delivery date must be after request date</div>');
+            }
+          } else {
+            $to.removeClass('is-invalid');
+            $to.next('.invalid-feedback').remove();
+            updateDateInfo();
+          }
+        }
+      }
     }
-    function handleNum(){ const $i=$(this); let v=$i.val().replace(/[^0-9.]/g,''); const parts=v.split('.'); if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join(''); const n=parseFloat(v); if (n<0 || isNaN(n)) v='0.00'; $i.val(v); }
-    function blurNum(){ const $i=$(this); const n=parseFloat($i.val()); $i.val(isNaN(n)?'0.00':n.toFixed(2)); }
+    
+    // Initialize datepickers when modal is shown
+    $('#editPOModal').on('shown.bs.modal', function() {
+      console.log('Edit modal shown, initializing datepickers...');
+      
+      // Add a small delay to ensure DOM is fully ready
+      setTimeout(function() {
+        initDatepickers();
+      }, 100);
+    });
+    
+    // Clean up datepickers when modal is hidden
+    $('#editPOModal').on('hidden.bs.modal', function() {
+      console.log('Edit modal hidden, cleaning up datepickers...');
+      const $from = $('#date-from');
+      const $to = $('#date-to');
+      
+      try {
+        if ($from.hasClass('hasDatepicker')) {
+          console.log('Destroying "from" datepicker');
+          $from.datepicker('destroy');
+        }
+        if ($to.hasClass('hasDatepicker')) {
+          console.log('Destroying "to" datepicker');
+          $to.datepicker('destroy');
+        }
+      } catch (error) {
+        console.error('Error destroying datepickers:', error);
+      }
+    });
+    
+    // Initialize on document ready for non-modal usage
+    $(document).ready(function() {
+      console.log('Document ready, checking for jQuery UI availability...');
+      if (typeof $.datepicker !== 'undefined') {
+        console.log('jQuery UI datepicker is available');
+        // Initialize immediately if not in a modal context
+        if (!$('#editPOModal').length) {
+          initDatepickers();
+        }
+      } else {
+        console.error('jQuery UI datepicker is not available');
+      }
+    });
+    
+    // Character counter for purpose input
+    const $purpose = $('#purpose-input'); 
+    const $count = $('#text-count'); 
+    const maxLen = $purpose.attr('maxlength');
+    if ($purpose.length && $count.length && maxLen){
+      function updateCounter(){
+        const rem = maxLen - $purpose.val().length; 
+        $count.text(rem + ' characters remaining'); 
+        $count.toggleClass('text-danger', rem<=20).toggleClass('text-muted', rem>20);
+      }
+      updateCounter(); 
+      $purpose.on('input', updateCounter);
+    }
+    
+    // Number input handlers for shipping and discount
+    function handleNum(){ 
+      const $i=$(this); 
+      let v=$i.val().replace(/[^0-9.]/g,''); 
+      const parts=v.split('.'); 
+      if(parts.length>2) v=parts[0]+'.'+parts.slice(1).join(''); 
+      const n=parseFloat(v); 
+      if (n<0 || isNaN(n)) v='0.00'; 
+      $i.val(v);
+    }
+    function blurNum(){ 
+      const $i=$(this); 
+      const n=parseFloat($i.val()); 
+      $i.val(isNaN(n)?'0.00':n.toFixed(2));
+    }
     $('#calc-shipping-input, #calc-discount-input').on('input', handleNum).on('blur', blurNum);
+    
+    // Expose updateDateInfo for external use
+    window.updateDateInfo = updateDateInfo;
   });
 }
 

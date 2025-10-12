@@ -14,6 +14,22 @@ return new class extends Migration
                 $table->uuid('status_id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->string('status_name', 50)->unique();
                 $table->text('description')->nullable();
+                $table->string('color', 7)->nullable()->default('#6c757d');
+                $table->integer('sort_order')->nullable()->default(0);
+                $table->timestamps();
+            });
+        } else {
+            // Add color column if it doesn't exist
+            Schema::table('statuses', function (Blueprint $table) {
+                if (!Schema::hasColumn('statuses', 'color')) {
+                    $table->string('color', 7)->nullable()->default('#6c757d');
+                }
+                if (!Schema::hasColumn('statuses', 'sort_order')) {
+                    $table->integer('sort_order')->nullable()->default(0);
+                }
+                if (!Schema::hasColumn('statuses', 'created_at')) {
+                    $table->timestamps();
+                }
             });
         }
     }

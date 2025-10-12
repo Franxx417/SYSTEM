@@ -2,12 +2,12 @@
 @section('title','My Purchase Orders')
 @section('page_heading','My Purchase Orders')
 @section('page_subheading','Create and track your purchase orders')
+
+@push('styles')
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+@endpush
+
 @section('content')
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    <link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <style>
         /* Status cards for modal */
@@ -63,39 +63,21 @@
             transition: all 0.2s ease;
         }
         
-        /* Status-specific colors for modal cards */
-        .status-card.pending { background: #fff3cd; border-color: #ffc107; }
-        .status-card.pending .status-icon { background: #ffc107; }
-        .status-card.pending .status-action { background: #ffc107; color: #000; }
-        .status-card.pending .status-action:hover { background: #e0a800; color: #000; }
+        /* Status option styling */
+        .status-option {
+            transition: all 0.2s ease;
+        }
         
-        .status-card.verified { background: #d1ecf1; border-color: #17a2b8; }
-        .status-card.verified .status-icon { background: #17a2b8; }
-        .status-card.verified .status-action { background: #17a2b8; color: #fff; }
-        .status-card.verified .status-action:hover { background: #138496; color: #fff; }
+        .status-option:hover {
+            background-color: #f8f9fa !important;
+        }
         
-        .status-card.approved { background: #d4edda; border-color: #28a745; }
-        .status-card.approved .status-icon { background: #28a745; }
-        .status-card.approved .status-action { background: #28a745; color: #fff; }
-        .status-card.approved .status-action:hover { background: #1e7e34; color: #fff; }
-        
-        .status-card.received { background: #e2e3f1; border-color: #6f42c1; }
-        .status-card.received .status-icon { background: #6f42c1; }
-        .status-card.received .status-action { background: #6f42c1; color: #fff; }
-        .status-card.received .status-action:hover { background: #5a32a3; color: #fff; }
-        
-        .status-card.rejected { background: #f8d7da; border-color: #dc3545; }
-        .status-card.rejected .status-icon { background: #dc3545; }
-        .status-card.rejected .status-action { background: #dc3545; color: #fff; }
-        .status-card.rejected .status-action:hover { background: #c82333; color: #fff; }
-        
-        .status-card.cancelled { background: #e2e3e5; border-color: #6c757d; }
-        .status-card.cancelled .status-icon { background: #6c757d; }
-        .status-card.cancelled .status-action { background: #6c757d; color: #fff; }
-        .status-card.cancelled .status-action:hover { background: #545b62; color: #fff; }
+        .status-option.active {
+            background-color: #e7f1ff !important;
+            border-color: #007bff !important;
+        }
     </style>
     <!-- Filters and New PO button -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
     <div class="row mb-3">
         <div class="col-lg-8 mb-3 mb-lg-0">
             <form method="GET" action="{{ route('po.index') }}" class="row g-2">
@@ -181,7 +163,7 @@
                                  data-po="{{ $po->purchase_order_no }}" 
                                  data-current-status="{{ $statusName }}"
                                  onclick="showStatusChangeModal('{{ $po->purchase_order_no }}', '{{ $statusName }}')">
-                                @include('partials.status-display', ['status' => $statusName, 'type' => 'circle'])
+                                @include('partials.status-display', ['status' => $statusName, 'type' => 'text'])
                             </div>
                         </td>
                         <td class="text-end">₱{{ number_format($po->total, 2) }}</td>
@@ -297,11 +279,11 @@
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Date Requested</label>
-                                            <input id="date-from" type="text" name="date_requested" required autocomplete="off" />
+                                            <input id="date-from" class="form-control" type="text" name="date_requested" required autocomplete="off" placeholder="YYYY-MM-DD" />
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label">Delivery Date</label>
-                                            <input id="date-to" class="datte" type="text" name="delivery_date" required autocomplete="off" />
+                                            <input id="date-to" class="form-control" type="text" name="delivery_date" required autocomplete="off" placeholder="YYYY-MM-DD" />
                                         </div>
                                         <div id="result" class="text-muted small mt-2"></div>
                                     </div>
@@ -311,19 +293,19 @@
                                 <div class="card"><div class="card-body">
                                     <div class="d-flex justify-content-between">
                                         <span class="text-muted">Shipping</span>
-                                        <input class="form-control text-end w-50" id="calc-shipping-input" type="number" min="0" placeholder="0.00" />
+                                        <input class="form-control text-end w-50 number-only-input" id="calc-shipping-input" type="text" min="0" step="0.01" placeholder="0.00" />
                                     </div>
                                     <div class="d-flex justify-content-between mt-2">
                                         <span class="text-muted">Discount</span>
-                                        <input class="form-control text-end w-50" id="calc-discount-input" type="number" min="0" placeholder="0.00" />
+                                        <input class="form-control text-end w-50 number-only-input" id="calc-discount-input" type="text" min="0" step="0.01" placeholder="0.00" />
                                     </div>
                                     <div class="d-flex justify-content-between mt-3">
                                         <span class="text-muted">Vatable Sales (Ex Vat)</span>
-                                        <input class="form-control text-end w-50" id="calc-subtotal" type="text" placeholder="0" required autocomplete="off" />
+                                        <input class="form-control text-end w-50 number-only-input" id="calc-subtotal" type="text" placeholder="0" readonly />
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <span class="text-muted">12% Vat</span>
-                                        <input class="form-control text-end w-50" id="calc-vat" type="text" placeholder="0" required autocomplete="off" />
+                                        <input class="form-control text-end w-50 number-only-input" id="calc-vat" type="text" placeholder="0" readonly />
                                     </div>
                                     <hr>
                                     <div class="d-flex justify-content-between fw-semibold">
@@ -463,30 +445,20 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label">Select New Status:</label>
-                            <div class="row g-2" id="statusOptions">
+                            <div class="list-group">
                                 @foreach($statuses as $status)
                                     @php
-                                        $statusClass = strtolower(str_replace(' ', '', $status->status_name));
-                                        $statusDescriptions = [
-                                            'pending' => 'Purchase order is awaiting review',
-                                            'verified' => 'Purchase order has been verified',
-                                            'approved' => 'Purchase order has been approved',
-                                            'received' => 'Purchase order items have been received',
-                                            'rejected' => 'Purchase order has been rejected',
-                                            'cancelled' => 'Purchase order has been cancelled'
-                                        ];
-                                        $description = $statusDescriptions[$statusClass] ?? 'Status description not available';
+                                        $description = $status->description ?? 'Status description';
                                     @endphp
-                                    <div class="col-md-6 mb-2">
-                                        <div class="status-card {{ $statusClass }} status-option" 
-                                             data-status-id="{{ $status->status_id }}" 
-                                             data-status-name="{{ $status->status_name }}"
-                                             onclick="selectStatus(this)">
-                                            <div class="status-title">
-                                                <span class="status-icon"></span>{{ $status->status_name }}
-                                            </div>
-                                            <div class="status-description">{{ $description }}</div>
+                                    <div class="list-group-item list-group-item-action status-option" 
+                                         data-status-id="{{ $status->status_id }}" 
+                                         data-status-name="{{ $status->status_name }}"
+                                         onclick="selectStatus(this)"
+                                         style="cursor: pointer;">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ $status->status_name }}</h6>
                                         </div>
+                                        <p class="mb-0 text-muted small">{{ $description }}</p>
                                     </div>
                                 @endforeach
                             </div>
@@ -509,79 +481,271 @@
     </div>
 
     @vite(['resources/js/pages/po-index.js', 'resources/js/pages/po-edit.js'])
-    
+@endsection
+
+@push('scripts')
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/ui-lightness/jquery-ui.css">
+    <style>
+        /* Enhanced datepicker styling - ensure it appears above edit modal */
+        .ui-datepicker {
+            z-index: 10000 !important;
+            font-size: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+        
+        /* Ensure datepicker appears above Bootstrap modal */
+        .modal .ui-datepicker {
+            z-index: 1060 !important;
+        }
+        
+        .ui-datepicker-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .ui-datepicker td span, .ui-datepicker td a {
+            padding: 4px;
+            text-align: center;
+        }
+        
+        .ui-datepicker .ui-state-active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .ui-datepicker .ui-state-hover {
+            background-color: #e9ecef;
+        }
+        
+        /* Date input styling */
+        #date-from, #date-to {
+            cursor: pointer;
+        }
+        
+        #date-from:focus, #date-to:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Result text styling */
+        #result {
+            font-weight: 500;
+            margin-top: 5px;
+        }
+        
+        /* Modal date section styling */
+        .modal-body .row .col-md-6 {
+            position: relative;
+        }
+        
+        /* Loading state for date inputs */
+        .date-loading {
+            position: relative;
+        }
+        
+        .date-loading::after {
+            content: '📅';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+    </style>
     <script>
-        // Global variables for status change
-        let currentPO = '';
-        let currentStatusName = '';
-        
-        // Show status change modal
-        function showStatusChangeModal(poNumber, statusName) {
-            currentPO = poNumber;
-            currentStatusName = statusName;
+        // Simple direct approach - initialize immediately (replicates create.blade.php behavior)
+        jQuery(function($) {
+            console.log('Initializing datepickers...');
             
-            document.getElementById('status_po_number').textContent = poNumber;
-            document.getElementById('status_current').textContent = statusName;
+            var $from = $('#date-from');
+            var $to = $('#date-to');
             
-            // Reset form
-            document.getElementById('statusChangeForm').action = `/po/${poNumber}/status`;
-            document.getElementById('selected_status_id').value = '';
-            document.getElementById('status_remarks').value = '';
-            document.getElementById('confirmStatusChange').disabled = true;
-            
-            // Reset all status options
-            document.querySelectorAll('.status-option').forEach(option => {
-                option.classList.remove('active');
-            });
-            
-            // Show modal
-            new bootstrap.Modal(document.getElementById('statusChangeModal')).show();
-        }
-        
-        // Select status in modal
-        function selectStatus(element) {
-            // Remove active class from all options
-            document.querySelectorAll('.status-option').forEach(option => {
-                option.classList.remove('active');
-            });
-            
-            // Add active class to selected option
-            element.classList.add('active');
-            
-            // Set hidden input value
-            const statusId = element.getAttribute('data-status-id');
-            const statusName = element.getAttribute('data-status-name');
-            
-            document.getElementById('selected_status_id').value = statusId;
-            
-            // Enable confirm button if different status selected
-            const confirmBtn = document.getElementById('confirmStatusChange');
-            if (statusName !== currentStatusName) {
-                confirmBtn.disabled = false;
-            } else {
-                confirmBtn.disabled = true;
+            if ($from.length && $to.length) {
+                $from.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $to.datepicker('option', 'minDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                $to.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $from.datepicker('option', 'maxDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                function updateDateInfo() {
+                    var fromVal = $from.val();
+                    var toVal = $to.val();
+                    var $result = $('#result');
+                    if (fromVal && toVal) {
+                        var fromDate = new Date(fromVal);
+                        var toDate = new Date(toVal);
+                        var diffTime = Math.abs(toDate - fromDate);
+                        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        $result.text('Delivery period: ' + diffDays + ' days');
+                    } else {
+                        $result.text('');
+                    }
+                }
+                
+                console.log('Datepickers initialized successfully!');
             }
-        }
-        
-        // Handle status change confirmation
-        document.getElementById('confirmStatusChange').addEventListener('click', function() {
-            const form = document.getElementById('statusChangeForm');
-            const statusId = document.getElementById('selected_status_id').value;
             
-            if (statusId) {
-                // Submit the form
-                form.submit();
+            // Purpose counter
+            var $purpose = $('#purpose-input');
+            var $count = $('#text-count');
+            var maxLen = $purpose.attr('maxlength');
+            if ($purpose.length && $count.length && maxLen) {
+                function updateCounter() {
+                    var rem = maxLen - $purpose.val().length;
+                    $count.text(rem + ' characters remaining');
+                    $count.toggleClass('text-danger', rem <= 20).toggleClass('text-muted', rem > 20);
+                }
+                updateCounter();
+                $purpose.on('input', updateCounter);
             }
         });
         
-        // Prevent status card click when clicking on preview link
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('status-action')) {
-                e.stopPropagation();
+        // Modal-specific datepicker reinitialization
+        $('#editPOModal').on('shown.bs.modal', function() {
+            console.log('Edit modal shown - reinitializing datepickers...');
+            
+            var $from = $('#date-from');
+            var $to = $('#date-to');
+            
+            // Destroy existing datepickers if any
+            if ($from.hasClass('hasDatepicker')) {
+                $from.datepicker('destroy');
             }
+            if ($to.hasClass('hasDatepicker')) {
+                $to.datepicker('destroy');
+            }
+            
+            // Reinitialize with same settings
+            if ($from.length && $to.length) {
+                $from.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $to.datepicker('option', 'minDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                $to.datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    onSelect: function(d) {
+                        $from.datepicker('option', 'maxDate', d);
+                        updateDateInfo();
+                    }
+                });
+                
+                function updateDateInfo() {
+                    var fromVal = $from.val();
+                    var toVal = $to.val();
+                    var $result = $('#result');
+                    if (fromVal && toVal) {
+                        var fromDate = new Date(fromVal);
+                        var toDate = new Date(toVal);
+                        var diffTime = Math.abs(toDate - fromDate);
+                        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        $result.text('Delivery period: ' + diffDays + ' days');
+                    } else {
+                        $result.text('');
+                    }
+                }
+                
+                console.log('Modal datepickers reinitialized successfully!');
+            }
+            
+            // Reinitialize purpose counter
+            var $purpose = $('#purpose-input');
+            var $count = $('#text-count');
+            var maxLen = $purpose.attr('maxlength');
+            if ($purpose.length && $count.length && maxLen) {
+                function updateCounter() {
+                    var rem = maxLen - $purpose.val().length;
+                    $count.text(rem + ' characters remaining');
+                    $count.toggleClass('text-danger', rem <= 20).toggleClass('text-muted', rem > 20);
+                }
+                updateCounter();
+                $purpose.off('input.modal').on('input.modal', updateCounter);
+            }
+        });
+        
+        // Clean up modal datepickers when hidden
+        $('#editPOModal').on('hidden.bs.modal', function() {
+            var $from = $('#date-from');
+            var $to = $('#date-to');
+            if ($from.hasClass('hasDatepicker')) {
+                $from.datepicker('destroy');
+            }
+            if ($to.hasClass('hasDatepicker')) {
+                $to.datepicker('destroy');
+            }
+        });
+
+        // Number-only validation for financial inputs (same as create page)
+        function enforcePositiveNumberOnly(input) {
+          input.addEventListener('input', function() {
+            let value = this.value;
+            // Remove any non-numeric characters except decimal point
+            value = value.replace(/[^0-9.]/g, '');
+            // Only allow one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+              value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Ensure non-negative
+            const num = parseFloat(value);
+            if (num < 0 || isNaN(num)) {
+              value = '';
+            }
+            this.value = value;
+          });
+          
+          input.addEventListener('blur', function() {
+            if (this.value === '' || this.value === '.') {
+              this.value = '0.00';
+            } else {
+              const num = parseFloat(this.value);
+              this.value = isNaN(num) ? '0.00' : num.toFixed(2);
+            }
+          });
+          
+          // Prevent negative numbers on paste
+          input.addEventListener('paste', function() {
+            setTimeout(() => {
+              let value = this.value.replace(/[^0-9.]/g, '');
+              const num = parseFloat(value);
+              if (num < 0 || isNaN(num)) {
+                this.value = '0.00';
+              }
+            }, 0);
+          });
+        }
+        
+        // Apply number-only validation to all financial inputs
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.number-only-input:not([readonly])').forEach(function(input) {
+            enforcePositiveNumberOnly(input);
+          });
         });
     </script>
-@endsection
+@endpush
 
 
 

@@ -97,7 +97,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="addUserForm" method="POST" action="{{ route('superadmin.users.create') }}">
+            <form id="addUserForm" method="POST" action="{{ route('admin.users.store') }}">
                 @csrf
                 <div class="modal-body">
                     <div class="row">

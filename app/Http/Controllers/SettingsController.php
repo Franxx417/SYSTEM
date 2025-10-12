@@ -182,12 +182,48 @@ class SettingsController extends Controller
     }
     
     /**
-     * Generate dynamic status CSS
+     * Generate dynamic status CSS from database
+     * NOTE: Color functionality has been removed - returns minimal CSS
      */
     public function dynamicStatusCss()
     {
-        $css = "
-        /* Dynamic Status Colors */
+        // Color functionality has been removed from the system
+        // Return minimal CSS to prevent errors
+        $css = "/* Status CSS - Color indicators disabled */\n";
+        $css .= "/* All status styling is now text-based */\n";
+        
+        return response($css, 200, [
+            'Content-Type' => 'text/css',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+    
+    /**
+     * Calculate contrast color (black or white) based on background color
+     */
+    private function getContrastColor($hexColor)
+    {
+        // Remove # if present
+        $hexColor = ltrim($hexColor, '#');
+        
+        // Convert to RGB
+        $r = hexdec(substr($hexColor, 0, 2));
+        $g = hexdec(substr($hexColor, 2, 2));
+        $b = hexdec(substr($hexColor, 4, 2));
+        
+        // Calculate luminance
+        $luminance = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        
+        // Return black for light backgrounds, white for dark backgrounds
+        return $luminance > 0.5 ? '#000' : '#fff';
+    }
+    
+    /**
+     * Get default status CSS as fallback
+     */
+    private function getDefaultStatusCSS()
+    {
+        return "
         .status-pending { background-color: #ffc107; color: #000; }
         .status-verified { background-color: #17a2b8; color: #fff; }
         .status-approved { background-color: #28a745; color: #fff; }
@@ -195,7 +231,6 @@ class SettingsController extends Controller
         .status-received { background-color: #6f42c1; color: #fff; }
         .status-cancelled { background-color: #6c757d; color: #fff; }
         
-        /* Badge variants */
         .badge.status-pending { background-color: #ffc107 !important; color: #000 !important; }
         .badge.status-verified { background-color: #17a2b8 !important; color: #fff !important; }
         .badge.status-approved { background-color: #28a745 !important; color: #fff !important; }
@@ -203,10 +238,5 @@ class SettingsController extends Controller
         .badge.status-received { background-color: #6f42c1 !important; color: #fff !important; }
         .badge.status-cancelled { background-color: #6c757d !important; color: #fff !important; }
         ";
-        
-        return response($css, 200, [
-            'Content-Type' => 'text/css',
-            'Cache-Control' => 'public, max-age=3600',
-        ]);
     }
 }

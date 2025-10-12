@@ -132,15 +132,20 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  // Confirm Status Change
+  // Confirm Status Change - Works with modal-based status changes
   var confirmBtn = document.getElementById('confirmStatusChange');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', function() {
-      if (!(window.pendingStatusForm && window.pendingStatusValue)) return;
-      var form = window.pendingStatusForm;
-      var select = window.pendingStatusSelect;
-      var newVal = window.pendingStatusValue;
+      var form = document.getElementById('statusChangeForm');
+      var statusIdInput = document.getElementById('selected_status_id');
       var remarksEl = document.getElementById('status_remarks');
+      
+      if (!form || !statusIdInput || !statusIdInput.value) {
+        console.error('[PO Status Update] Missing form or status ID');
+        return;
+      }
+      
+      var newVal = statusIdInput.value;
       var remarks = remarksEl ? remarksEl.value : '';
 
       // Prepare AJAX request
@@ -148,39 +153,65 @@ document.addEventListener('DOMContentLoaded', function(){
       var csrf = tokenInput ? tokenInput.value : '';
       var fd = new FormData(form);
       fd.set('status_id', newVal);
-      fd.set('remarks', remarks || 'Status changed via dropdown');
+      fd.set('remarks', remarks || 'Status changed via status modal');
+
+      console.log('[PO Status Update] Sending request...', {
+        action: form.action,
+        status_id: newVal,
+        remarks: remarks
+      });
+
+      // Disable button to prevent double-submission
+      if (confirmBtn) confirmBtn.disabled = true;
 
       fetch(form.action, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': csrf
         },
         body: fd,
         credentials: 'same-origin'
-      }).then(function(res){
-        if (!res.ok) throw new Error('Failed to update status');
-        return res.json().catch(function(){ return {}; });
-      }).then(function(){
-        // Update UI selection and original value
-        if (select) {
-          select.value = newVal;
-          select.dataset.originalValue = newVal;
-          // update data-current-status label
-          var opt = select.options[select.selectedIndex];
-          if (opt) select.setAttribute('data-current-status', opt.textContent);
+      }).then(async function(res){
+        const contentType = res.headers.get('content-type');
+        
+        // Check if response is JSON
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await res.text();
+          console.error('[PO Status Update] Received non-JSON response:', text.substring(0, 200));
+          throw new Error('Server returned HTML instead of JSON. Please check authentication.');
         }
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to update status');
+        }
+        
+        return data;
+      }).then(function(data){
+        console.log('[PO Status Update] Success:', data);
+        
+        // Show success message
+        if (data.success && data.message) {
+          showNotification(data.message, 'success');
+        }
+        
+        // Reload to sync with latest data
+        setTimeout(function(){
+          location.reload();
+        }, 1500);
+        
       }).catch(function(err){
-        console.error(err);
-        alert('Could not update status. Please try again.');
+        console.error('[PO Status Update] Error:', err);
+        showNotification('Error: ' + err.message, 'error');
       }).finally(function(){
+        // Re-enable button
+        if (confirmBtn) confirmBtn.disabled = false;
+        
         var modal = bootstrap.Modal.getInstance(document.getElementById('statusChangeModal'));
         if (modal) modal.hide();
-        // cleanup pending refs
-        window.pendingStatusForm = null;
-        window.pendingStatusValue = null;
-        window.pendingStatusSelect = null;
-        window.pendingStatusOldValue = null;
       });
     });
   }
@@ -227,6 +258,22 @@ document.addEventListener('DOMContentLoaded', function(){
       // Trigger change event to update VAT status
       supplierSelect.dispatchEvent(new Event('change'));
     }
+    
+    // Trigger datepicker date info update after data population
+    if (window.jQuery && typeof window.updatePODateInfo === 'function') {
+      console.log('Triggering datepicker date info update after data population');
+      setTimeout(function() {
+        window.updatePODateInfo();
+      }, 100);
+    }
+    
+    // Debug log for modal data population
+    console.log('PO edit modal populated with data:', {
+      po_number: po.purchase_order_no,
+      date_requested: po.date_requested,
+      delivery_date: po.delivery_date,
+      supplier_id: po.supplier_id
+    });
     
     // Populate totals
     el = document.getElementById('calc-shipping-input'); if (el) el.value = Number(po.shipping_fee || 0).toFixed(2);
@@ -289,6 +336,11 @@ document.addEventListener('DOMContentLoaded', function(){
   // Update the existing edit modal functions to use the new structure
   window.showEditModal = function(poId) {
     try {
+      // Clear any existing draft data when opening a specific PO for edit
+      if (window.poEditClearDraft) {
+        window.poEditClearDraft();
+      }
+      
       // Reuse the same JSON endpoint used for the View modal
       var table = document.getElementById('po-index-table');
       var tmpl = table ? table.getAttribute('data-po-show-template') : null;
@@ -302,6 +354,14 @@ document.addEventListener('DOMContentLoaded', function(){
             form.action = '/po/' + poId;
           }
           var modal = new bootstrap.Modal(document.getElementById('editPOModal'));
+          
+          // Add event listener to ensure datepickers initialize after modal is fully shown
+          document.getElementById('editPOModal').addEventListener('shown.bs.modal', function onModalShown() {
+            console.log('Edit modal shown via showEditModal - datepickers should initialize');
+            // Remove this listener to prevent memory leaks
+            document.getElementById('editPOModal').removeEventListener('shown.bs.modal', onModalShown);
+          }, { once: true });
+          
           modal.show();
         })
         .catch(error => {
@@ -322,6 +382,80 @@ document.addEventListener('DOMContentLoaded', function(){
       bsAlert.close();
     }, 5000);
   });
+
+  // Helper function to show notifications
+  function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+    notification.innerHTML = `
+      <i class="fas ${icon} me-2"></i>${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(function() {
+      if (notification.parentNode) {
+        const bsAlert = new bootstrap.Alert(notification);
+        bsAlert.close();
+      }
+    }, 3000);
+  }
 });
+
+// Global functions for status change modal (must be outside DOMContentLoaded)
+let currentPO = '';
+let currentStatusName = '';
+
+window.showStatusChangeModal = function(poNumber, statusName) {
+  currentPO = poNumber;
+  currentStatusName = statusName;
+  
+  document.getElementById('status_po_number').textContent = poNumber;
+  document.getElementById('status_current').textContent = statusName;
+  
+  // Reset form
+  document.getElementById('statusChangeForm').action = `/po/${poNumber}/status`;
+  document.getElementById('selected_status_id').value = '';
+  document.getElementById('status_remarks').value = '';
+  document.getElementById('confirmStatusChange').disabled = true;
+  
+  // Reset all status options
+  document.querySelectorAll('.status-option').forEach(option => {
+    option.classList.remove('active');
+  });
+  
+  // Show modal
+  new bootstrap.Modal(document.getElementById('statusChangeModal')).show();
+};
+
+window.selectStatus = function(element) {
+  // Remove active class from all options
+  document.querySelectorAll('.status-option').forEach(option => {
+    option.classList.remove('active');
+  });
+  
+  // Add active class to selected option
+  element.classList.add('active');
+  
+  // Set hidden input value
+  const statusId = element.getAttribute('data-status-id');
+  const statusName = element.getAttribute('data-status-name');
+  
+  document.getElementById('selected_status_id').value = statusId;
+  
+  // Enable confirm button if different status selected
+  const confirmBtn = document.getElementById('confirmStatusChange');
+  if (statusName !== currentStatusName) {
+    confirmBtn.disabled = false;
+  } else {
+    confirmBtn.disabled = true;
+  }
+};
 
 

@@ -151,7 +151,7 @@ class SuperAdminController extends Controller
         $userStats = $this->getUserStats();
         $activeSessions = $this->getActiveSessions();
 
-        return view('dashboards.superadmin', compact(
+        return view('superadmin.dashboard', compact(
             'settings', 'metrics', 'recentPOs', 'suppliers', 'statuses',
             'allUsers', 'userStats', 'activeSessions', 'securitySettings', 'securityAlerts',
             'dbStats', 'recentActivity'
@@ -630,7 +630,7 @@ class SuperAdminController extends Controller
             'db.timeout' => $dbSettings['db.timeout'] ?? env('DB_TIMEOUT', '30'),
         ];
         
-        return view('admin.database-settings', compact('settings'));
+        return view('superadmin.database-settings', compact('settings'));
     }
     
     /**
@@ -734,7 +734,7 @@ class SuperAdminController extends Controller
                 $logs = array_slice($lines, 0, 100); // Last 100 lines
             }
             
-            return view('admin.logs', compact('logs', 'auth'));
+            return view('superadmin.logs', compact('logs', 'auth'));
         } catch (\Throwable $e) {
             return back()->withErrors(['logs' => 'Failed to read logs: ' . $e->getMessage()]);
         }
@@ -796,7 +796,7 @@ class SuperAdminController extends Controller
         $request->validate([
             'username' => ['required', 'string', 'max:50', 'unique:login,username'],
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['required', 'string', 'in:requestor,finance_controller,department_head,authorized_personnel,superadmin'],
+            'role' => ['required', 'string', 'in:requestor,superadmin'],
             'password' => ['required', 'string', 'min:6']
         ]);
         
@@ -1658,7 +1658,7 @@ class SuperAdminController extends Controller
         $request->validate([
             'username' => ['required', 'string', 'max:50', 'unique:login,username'],
             'name' => ['required', 'string', 'max:100'],
-            'role' => ['required', 'string', 'in:requestor,finance_controller,department_head,authorized_personnel,superadmin'],
+            'role' => ['required', 'string', 'in:requestor,superadmin'],
             'password' => ['required', 'string', 'min:6']
         ]);
         

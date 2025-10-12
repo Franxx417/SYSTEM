@@ -49,6 +49,47 @@
             transition: all 0.3s ease-in-out;
         }
         
+        /* Profile dropdown styles */
+        #profileDropdown:hover .rounded-circle {
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+        }
+        
+        .dropdown-menu {
+            border: 1px solid rgba(0,0,0,.1);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        
+        .dropdown-item {
+            border-radius: 0.375rem;
+            margin: 0 0.5rem;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+        }
+        
+        .dropdown-item svg {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .dropdown-item:hover svg {
+            opacity: 1;
+        }
+        
+        .dropdown-divider {
+            margin: 0.5rem 0;
+        }
+        
+        .dropdown-header {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+        
         .sidebar-overlay.show {
             opacity: 1;
             visibility: visible;
@@ -203,13 +244,11 @@
             </div>
             <ul class="nav flex-column p-2">
                 <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && !request()->has('tab')) active @endif" href="{{ route('dashboard') }}"><i class="fas fa-house me-2"></i>Overview</a></li>
-                <li class="nav-item"><a class="nav-link @if(request()->is('items*')) active @endif" href="{{ route('items.index') }}"><i class="fas fa-boxes-stacked me-2"></i>Items</a></li>
+                <li class="nav-item"><a class="nav-link @if(request()->is('items') && !request()->is('items/inventory')) active @endif" href="{{ route('items.index') }}"><i class="fas fa-boxes-stacked me-2"></i>Items</a></li>
+                <li class="nav-item"><a class="nav-link @if(request()->is('items/inventory')) active @endif" href="{{ route('items.inventory') }}"><i class="fas fa-warehouse me-2"></i>Inventory Summary</a></li>
                 @php($auth = session('auth_user'))
                 @if($auth && $auth['role']==='requestor')
                     <li class="nav-item"><a class="nav-link @if(request()->is('po*')) active @endif" href="{{ route('po.index') }}"><i class="fas fa-file-invoice-dollar me-2"></i>My Purchase Orders</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
-                @elseif($auth && $auth['role']==='authorized_personnel')
-                    <li class="nav-item"><a class="nav-link @if(request()->is('admin/users*')) active @endif" href="{{ route('admin.users.index') }}"><i class="fas fa-users me-2"></i>User Management</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
                 @elseif($auth && $auth['role']==='superadmin')
                     <!-- SUPERADMIN UNRESTRICTED ACCESS - All System Features -->
@@ -217,7 +256,6 @@
                         <div class="nav-link text-muted small fw-bold text-uppercase px-2 mb-1">SYSTEM MANAGEMENT</div>
                     </li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'purchase-orders') active @endif" href="{{ route('dashboard') }}?tab=purchase-orders"><i class="fas fa-file-invoice me-2"></i>All Purchase Orders</a></li>
-                    <li class="nav-item"><a class="nav-link @if(request()->is('po*')) active @endif" href="{{ route('po.index') }}"><i class="fas fa-plus-circle me-2"></i>Create Purchase Order</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'user-management') active @endif" href="{{ route('dashboard') }}?tab=user-management"><i class="fas fa-users me-2"></i>User Management</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
                     
@@ -232,14 +270,7 @@
                     <li class="nav-item"><a class="nav-link @if(request()->is('dashboard') && request()->get('tab') === 'branding') active @endif" href="{{ route('dashboard') }}?tab=branding"><i class="fas fa-palette me-2"></i>Branding & UI</a></li>
                 @endif
                 
-                <!-- Settings link for all authenticated users -->
-                @if($auth)
-                    <li class="nav-item"><a class="nav-link @if(request()->is('settings*')) active @endif" href="{{ route('settings.index') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                @endif
                 
-                <li class="nav-item mt-auto">
-                    <form method="POST" action="{{ route('logout') }}" class="p-2">@csrf<button class="btn btn-outline-secondary w-100">Logout</button></form>
-                </li>
             </ul>
         </nav>
 
@@ -265,13 +296,52 @@
                                     <div class="badge bg-danger small">SUPERADMIN - UNRESTRICTED ACCESS</div>
                                 @endif
                             </div>
-                            @if(isset($auth['profile_photo']) && $auth['profile_photo'])
-                                <img src="{{ $auth['profile_photo'] }}" alt="Profile" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #dee2e6;">
-                            @else
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.2rem; font-weight: 600; border: 2px solid #dee2e6;">
-                                    {{ strtoupper(substr($auth['name'] ?? 'U', 0, 1)) }}
-                                </div>
-                            @endif
+                            <div class="dropdown">
+                                <button class="btn btn-link text-decoration-none p-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+                                    @if(isset($auth['profile_photo']) && $auth['profile_photo'])
+                                        <img src="{{ $auth['profile_photo'] }}" alt="Profile" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #dee2e6; transition: box-shadow 0.2s;">
+                                    @else
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.2rem; font-weight: 600; border: 2px solid #dee2e6; transition: box-shadow 0.2s;">
+                                            {{ strtoupper(substr($auth['name'] ?? 'U', 0, 1)) }}
+                                        </div>
+                                    @endif
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="profileDropdown" style="min-width: 200px;">
+                                    <li>
+                                        <div class="dropdown-header px-3 py-2">
+                                            <div class="fw-semibold">{{ $auth['name'] ?? '' }}</div>
+                                            <div class="small text-muted">{{ $auth['email'] ?? $auth['department'] ?? '' }}</div>
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <a class="dropdown-item py-2" href="{{ route('settings.index') }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear me-2" viewBox="0 0 16 16">
+                                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+                                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+                                            </svg>
+                                            @if($auth && $auth['role'] === 'superadmin')
+                                                Account Settings
+                                            @else
+                                                Settings
+                                            @endif
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('logout') }}" class="d-inline w-100">
+                                            @csrf
+                                            <button class="dropdown-item text-danger py-2" type="submit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right me-2" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                                                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                                                </svg>
+                                                Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                     <!-- Mobile user info -->
@@ -293,7 +363,16 @@
                                     <li><span class="dropdown-item-text"><span class="badge bg-danger small">SUPERADMIN ACCESS</span></span></li>
                                 @endif
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ route('settings.index') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('settings.index') }}">
+                                        <i class="fas fa-cog me-2"></i>
+                                        @if($auth && $auth['role'] === 'superadmin')
+                                            Account Settings
+                                        @else
+                                            Settings
+                                        @endif
+                                    </a>
+                                </li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                         @csrf

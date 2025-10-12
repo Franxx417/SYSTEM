@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/** Manage suppliers (authorized_personnel only) */
+/** Manage suppliers (requestor and superadmin) */
 class SupplierController extends Controller
 {
     /** Ensure user is authorized - SUPERADMIN HAS UNRESTRICTED ACCESS */
@@ -21,8 +21,8 @@ class SupplierController extends Controller
             return $auth;
         }
         
-        // Allow authorized_personnel and requestor for suppliers
-        if (!in_array($auth['role'], ['authorized_personnel', 'requestor'], true)) {
+        // Allow requestor for suppliers
+        if ($auth['role'] !== 'requestor') {
             abort(403);
         }
         return $auth;

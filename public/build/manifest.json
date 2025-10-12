@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DJa7kpTP.css",
+    "file": "assets/app-tn0RQdqM.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "names": [
@@ -24,7 +24,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-B15b3ncE.js",
+    "file": "assets/app-CEBmkf5a.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -93,7 +93,7 @@
     "isEntry": true
   },
   "resources/js/pages/items-index.js": {
-    "file": "assets/items-index-KaNt4roX.js",
+    "file": "assets/items-index-CQ1grLBf.js",
     "name": "items-index",
     "src": "resources/js/pages/items-index.js",
     "isEntry": true
@@ -110,6 +110,12 @@
     "src": "resources/js/pages/po-edit-extras.js",
     "isEntry": true
   },
+  "resources/js/pages/po-edit-modal.js": {
+    "file": "assets/po-edit-modal-F0Mg9PWD.js",
+    "name": "po-edit-modal",
+    "src": "resources/js/pages/po-edit-modal.js",
+    "isEntry": true
+  },
   "resources/js/pages/po-edit.js": {
     "file": "assets/po-edit-eGj3yhvE.js",
     "name": "po-edit",
@@ -117,7 +123,7 @@
     "isEntry": true
   },
   "resources/js/pages/po-index.js": {
-    "file": "assets/po-index-BfX5A_h9.js",
+    "file": "assets/po-index-BdnX1hB7.js",
     "name": "po-index",
     "src": "resources/js/pages/po-index.js",
     "isEntry": true

@@ -61,7 +61,11 @@ GO
 CREATE TABLE statuses (
   status_id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
   status_name VARCHAR(50) UNIQUE NOT NULL,
-  description VARCHAR(MAX) -- Changed TEXT to VARCHAR(MAX)
+  description VARCHAR(MAX), -- Changed TEXT to VARCHAR(MAX)
+  color VARCHAR(7) DEFAULT '#6c757d', -- Hex color code for status
+  sort_order INT DEFAULT 0, -- Order for display
+  created_at DATETIME2 DEFAULT GETDATE(),
+  updated_at DATETIME2 DEFAULT GETDATE()
 );
 GO
 

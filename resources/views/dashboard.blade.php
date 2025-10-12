@@ -18,9 +18,6 @@
 
         <div class="mt-3">
             <p class="lead">Welcome, {{ $auth['name'] }} ({{ $auth['role'] }})</p>
-            @if($auth['role'] === 'authorized_personnel')
-                <a class="btn btn-primary" href="{{ route('admin.users.index') }}">Manage Users</a>
-            @endif
         </div>
     </div>
 </body>

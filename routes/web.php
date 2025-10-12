@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 // Auth and role controllers
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
@@ -13,9 +12,6 @@ use App\Http\Controllers\ItemsController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatusController;
-
-Route::get('/post/create', [App\Http\Controllers\PostController::class, 'create']);
-Route::post('/post', [App\Http\Controllers\PostController::class, 'store']);
 
 // Landing: redirect to login
 Route::get('/', function () {
@@ -50,6 +46,14 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::post('/users/create', [SuperAdminController::class, 'createUser'])->name('users.create');
 });
 
+// Admin routes (alias for superadmin user management)
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::post('/users', [SuperAdminController::class, 'createUser'])->name('users.store');
+    Route::post('/users/reset-password', [SuperAdminController::class, 'resetUserPassword'])->name('users.reset-password');
+    Route::post('/users/toggle', [SuperAdminController::class, 'toggleUserStatus'])->name('users.toggle');
+    Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUser'])->name('users.delete');
+});
+
 // Superadmin API routes - NO RESTRICTIONS FOR SUPERADMIN
 Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
     Route::get('/test', function() {
@@ -75,11 +79,6 @@ Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
     Route::post('/branding/update', [SuperAdminController::class, 'updateBrandingApi'])->name('branding.update');
 });
 
-// Admin: user management (authorized_personnel)
-Route::prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-});
 
 // Purchase Orders (Requestor)
 Route::prefix('po')->name('po.')->group(function () {
@@ -91,12 +90,13 @@ Route::prefix('po')->name('po.')->group(function () {
     Route::get('/{poNo}/print', [PurchaseOrderController::class, 'print'])->name('print');
     Route::get('/{poNo}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
     Route::put('/{poNo}', [PurchaseOrderController::class, 'update'])->name('update');
+    Route::delete('/{poNo}', [PurchaseOrderController::class, 'destroy'])->name('destroy');
     Route::post('/{poNo}/status', [PurchaseOrderController::class, 'updateStatus'])->name('update_status');
     Route::get('/next/number', [PurchaseOrderController::class, 'nextNumber'])->name('next_number');
     Route::get('/getallorder', [PurchaseOrderController::class, 'getAllPO']);
 });
 
-// Suppliers (Authorized Personnel & Superadmin)
+// Suppliers (Requestor & Superadmin)
 Route::prefix('suppliers')->name('suppliers.')->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('index');
     Route::get('/create', [SupplierController::class, 'create'])->name('create');
@@ -112,6 +112,7 @@ Route::prefix('suppliers')->name('suppliers.')->group(function () {
 Route::prefix('items')->name('items.')->group(function () {
     Route::get('/', [ItemsController::class, 'index'])->name('index');
     Route::get('/create', [ItemsController::class, 'create'])->name('create');
+    Route::get('/inventory', [ItemsController::class, 'inventory'])->name('inventory');
     Route::post('/', [ItemsController::class, 'store'])->name('store');
     Route::get('/{id}/edit', [ItemsController::class, 'edit'])->name('edit');
     Route::put('/{id}', [ItemsController::class, 'update'])->name('update');
@@ -128,6 +129,11 @@ Route::post('/approvals/{poId}/receive', [ApprovalController::class, 'receive'])
 Route::get('/api/items/suggestions', [ItemController::class, 'suggestions'])->name('api.items.suggestions');
 Route::get('/api/items/latest-price', [ItemController::class, 'latestPrice'])->name('api.items.latest_price');
 
+// Status API for status change modal
+Route::get('/api/statuses', function() {
+    return response()->json(\DB::table('statuses')->get());
+});
+
 // Settings routes
 Route::prefix('settings')->name('settings.')->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('index');
@@ -137,26 +143,13 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::delete('/logo/remove', [SettingsController::class, 'removeLogo'])->name('logo.remove');
 });
 
-// Status management routes
+// Status management routes (used by Dashboard Status Configuration)
 Route::prefix('status')->name('status.')->group(function () {
     Route::get('/', [StatusController::class, 'index'])->name('index');
-    Route::post('/', [StatusController::class, 'store'])->name('store');
-    Route::put('/{id}', [StatusController::class, 'update'])->name('update');
-    Route::delete('/{id}', [StatusController::class, 'destroy'])->name('destroy');
-});
-
-// Admin Status management routes (for advanced settings)
-Route::prefix('admin/status')->name('admin.status.')->group(function () {
-    Route::get('/', [StatusController::class, 'adminIndex'])->name('index');
     Route::get('/config', [StatusController::class, 'config'])->name('config');
-    Route::post('/config', [StatusController::class, 'updateConfig'])->name('config.update');
-    Route::get('/create', [StatusController::class, 'create'])->name('create');
     Route::post('/', [StatusController::class, 'store'])->name('store');
-    Route::get('/{id}/edit', [StatusController::class, 'edit'])->name('edit');
     Route::put('/{id}', [StatusController::class, 'update'])->name('update');
     Route::delete('/{id}', [StatusController::class, 'destroy'])->name('destroy');
-    Route::post('/reorder', [StatusController::class, 'reorder'])->name('reorder');
-    Route::post('/reset', [StatusController::class, 'reset'])->name('reset');
 });
 
 // Dynamic CSS route
