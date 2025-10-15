@@ -37,8 +37,6 @@ class PurchaseOrderController extends Controller
         }
         return $auth;
     }
-    
-
 
     /** List current user's POs with filters */
     public function index(Request $request)
@@ -461,80 +459,6 @@ class PurchaseOrderController extends Controller
         if (!$po) return response()->json(['error' => 'Not found'], 404);
         $items = DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->get();
         return response()->json(['po' => $po, 'items' => $items]);
-    }
-
-    /**
-     * Delete a purchase order
-     */
-    public function destroy(Request $request, $poNo)
-    {
-        // Get authenticated user
-        $auth = $this->requireRole($request, 'requestor');
-        
-        try {
-            // Find the purchase order
-            $po = DB::table('purchase_orders')
-                ->where('purchase_order_no', $poNo)
-                ->first();
-                
-            if (!$po) {
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Purchase order not found'
-                    ], 404);
-                }
-                return redirect()->route('po.index')->with('error', 'Purchase order not found');
-            }
-            
-            // Check if user has permission to delete (must be the requestor or superadmin)
-            if ($auth['role'] !== 'superadmin' && $po->requestor_id !== $auth['user_id']) {
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You do not have permission to delete this purchase order'
-                    ], 403);
-                }
-                return redirect()->route('po.index')->with('error', 'You do not have permission to delete this purchase order');
-            }
-            
-            // Delete related records in transaction
-            DB::transaction(function () use ($po) {
-                // Delete approvals
-                DB::table('approvals')->where('purchase_order_id', $po->purchase_order_id)->delete();
-                
-                // Delete items
-                DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->delete();
-                
-                // Delete purchase order
-                DB::table('purchase_orders')->where('purchase_order_id', $po->purchase_order_id)->delete();
-            });
-            
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Purchase order deleted successfully'
-                ]);
-            }
-            
-            return redirect()->route('po.index')->with('success', 'Purchase order deleted successfully');
-            
-        } catch (\Exception $e) {
-            \Log::error('Failed to delete purchase order', [
-                'po_no' => $poNo,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to delete purchase order: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return redirect()->route('po.index')->with('error', 'Failed to delete purchase order: ' . $e->getMessage());
-        }
     }
 
     /**

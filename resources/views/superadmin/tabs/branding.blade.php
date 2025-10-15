@@ -56,25 +56,6 @@
                     @endif
                 </div>
             </div>
-            <hr>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Primary Color</label>
-                        <input type="color" class="form-control form-control-color" 
-                               name="primary_color" 
-                               value="{{ $settings['branding.primary_color'] ?? '#0d6efd' }}">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Secondary Color</label>
-                        <input type="color" class="form-control form-control-color" 
-                               name="secondary_color" 
-                               value="{{ $settings['branding.secondary_color'] ?? '#6c757d' }}">
-                    </div>
-                </div>
-            </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save me-1"></i>Save Branding

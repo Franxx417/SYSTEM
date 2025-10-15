@@ -39,6 +39,8 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/logs', [SuperAdminController::class, 'showLogs'])->name('logs');
     Route::post('/logs/clear', [SuperAdminController::class, 'clearLogs'])->name('logs.clear');
     
+
+    
     // User management for superadmin
     Route::post('/users/reset-password', [SuperAdminController::class, 'resetUserPassword'])->name('users.reset-password');
     Route::post('/users/toggle', [SuperAdminController::class, 'toggleUserStatus'])->name('users.toggle');

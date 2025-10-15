@@ -2253,8 +2253,6 @@ class SuperAdminController extends Controller
             $request->validate([
                 'app_name' => ['nullable','string','max:100'],
                 'logo' => ['nullable','file','mimes:png,jpg,jpeg,svg,webp','max:2048'],
-                'primary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
-                'secondary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
             ]);
             
             $updated = [];
@@ -2288,23 +2286,6 @@ class SuperAdminController extends Controller
                 $updated[] = 'logo';
             }
             
-            if ($request->filled('primary_color')) {
-                DB::table('settings')->updateOrInsert(['key' => 'branding.primary_color'], [
-                    'value' => $request->string('primary_color'), 
-                    'updated_at' => now(), 
-                    'created_at' => now()
-                ]);
-                $updated[] = 'primary_color';
-            }
-            
-            if ($request->filled('secondary_color')) {
-                DB::table('settings')->updateOrInsert(['key' => 'branding.secondary_color'], [
-                    'value' => $request->string('secondary_color'), 
-                    'updated_at' => now(), 
-                    'created_at' => now()
-                ]);
-                $updated[] = 'secondary_color';
-            }
             
             if (empty($updated)) {
                 return response()->json([

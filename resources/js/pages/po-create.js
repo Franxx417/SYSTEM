@@ -245,9 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // This will be handled by initializeForm() function
 
   // --- Draft persistence (localStorage) ---
-  const DRAFT_KEY = 'po_create_draft_v2'; // Updated version for enhanced persistence
+  const DRAFT_KEY = 'po_create_draft_v1';
   const SESSION_KEY = 'po_create_session_id';
-  const DRAFT_AUTOSAVE_INTERVAL = 10000; // 10 seconds
   
   // Generate a unique session ID for this form creation session
   function generateSessionId() {
@@ -311,34 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   function restoreForm(data){
     try{
-      if (!data) return false;
-      
-      // Validate data structure before restoring
-      if (typeof data !== 'object' || !data.hasOwnProperty('supplier_id')) {
-        console.warn('Invalid draft data structure, skipping restore');
-        return false;
-      }
-      
-      if (supplierSelect && data.supplier_id){ 
-        // Check if the supplier_id exists in the options
-        const supplierExists = Array.from(supplierSelect.options).some(opt => opt.value === data.supplier_id);
-        if (supplierExists || data.supplier_id === '__manual__') {
-          supplierSelect.value = data.supplier_id; 
-          supplierSelect.dispatchEvent(new Event('change')); 
-        } else {
-          console.warn('Supplier ID from draft not found in options:', data.supplier_id);
-        }
-      }
-      
+      if (!data) return;
+      if (supplierSelect && data.supplier_id){ supplierSelect.value = data.supplier_id; supplierSelect.dispatchEvent(new Event('change')); }
       const ns = data.new_supplier || {};
-      const set = (id,val)=>{ 
-        const el=document.getElementById(id); 
-        if (el){ 
-          el.value = val || ''; 
-          el.dispatchEvent(new Event('input')); 
-        } 
-      };
-      
+      const set = (id,val)=>{ const el=document.getElementById(id); if (el){ el.value = val || ''; el.dispatchEvent(new Event('input')); } };
       set('supplier-name', ns.name);
       set('supplier-vat-type', ns.vat_type);
       set('supplier-address', ns.address);
@@ -350,101 +325,45 @@ document.addEventListener('DOMContentLoaded', () => {
       set('date-to', data.delivery_date);
       set('calc-shipping-input', data.shipping);
       set('calc-discount-input', data.discount);
-      
       // rebuild items
-      if (items){ 
-        items.innerHTML = ''; 
-        idx = 0; 
-        
-        // Only restore items if they exist and are in an array
-        if (Array.isArray(data.items) && data.items.length > 0) {
-          data.items.forEach(it => {
-            addRow();
-            const row = items.lastElementChild;
-            const nameSelect = row.querySelector('.item-name-select');
-            const nameManual = row.querySelector('.item-name-manual');
-            
-            if (nameSelect){
-              if (it.item_name === '__manual__' || (nameManual && it.item_name && !Array.from(nameSelect.options).some(o=>o.value===it.item_name))) {
-                // manual value
-                nameSelect.value = '__manual__';
-                nameSelect.dispatchEvent(new Event('change'));
-                if (nameManual){ nameManual.value = it.item_name || ''; }
-              } else {
-                nameSelect.value = it.item_name || '';
-                nameSelect.dispatchEvent(new Event('change'));
-              }
-            }
-            
-            const desc = row.querySelector('.item-desc-manual'); 
-            if (desc){ desc.value = it.item_description || ''; desc.dispatchEvent(new Event('input')); }
-            
-            const qty = row.querySelector('input[name$="[quantity]"]'); 
-            if (qty){ qty.value = it.quantity || '1'; qty.dispatchEvent(new Event('input')); }
-            
-            const price = row.querySelector('.unit-price'); 
-            if (price){ price.value = it.unit_price || ''; price.dispatchEvent(new Event('input')); }
-          });
-        } else {
-          // Add a default row if no items in draft
-          addRow();
+      if (items){ items.innerHTML = ''; idx = 0; }
+      (data.items || []).forEach(it => {
+        addRow();
+        const row = items.lastElementChild;
+        const nameSelect = row.querySelector('.item-name-select');
+        const nameManual = row.querySelector('.item-name-manual');
+        if (nameSelect){
+          if (it.item_name === '__manual__' || (nameManual && it.item_name && !Array.from(nameSelect.options).some(o=>o.value===it.item_name))) {
+            // manual value
+            nameSelect.value = '__manual__';
+            nameSelect.dispatchEvent(new Event('change'));
+            if (nameManual){ nameManual.value = it.item_name; }
+          } else {
+            nameSelect.value = it.item_name || '';
+            nameSelect.dispatchEvent(new Event('change'));
+          }
         }
-      }
-      
+        const desc = row.querySelector('.item-desc-manual'); if (desc){ desc.value = it.item_description || ''; desc.dispatchEvent(new Event('input')); }
+        const qty = row.querySelector('input[name$="[quantity]"]'); if (qty){ qty.value = it.quantity || ''; qty.dispatchEvent(new Event('input')); }
+        const price = row.querySelector('.unit-price'); if (price){ price.value = it.unit_price || ''; price.dispatchEvent(new Event('input')); }
+      });
       recalcTotals();
-      return true;
-    } catch(e) {
-      console.error('Error restoring form data:', e);
-      return false;
-    }
+    }catch{}
   }
   
   function saveDraft(){ 
     try{ 
-      const formData = serializeForm();
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(formData)); 
-      
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(serializeForm())); 
       // Also save a timestamp to track when the draft was last updated
       localStorage.setItem(DRAFT_KEY + '_timestamp', Date.now().toString());
-      
-      // Show a visual indicator that draft was saved (optional)
-      const saveIndicator = document.getElementById('draft-save-indicator');
-      if (saveIndicator) {
-        saveIndicator.textContent = 'Draft saved ' + new Date().toLocaleTimeString();
-        saveIndicator.style.opacity = '1';
-        setTimeout(() => {
-          saveIndicator.style.opacity = '0.5';
-        }, 1000);
-      }
-      
-      return true;
-    } catch(e) { 
-      console.error('Error saving draft:', e);
-      return false;
-    } 
+    }catch{} 
   }
   
   function loadDraft(){ 
     try{ 
       const raw = localStorage.getItem(DRAFT_KEY); 
-      if (!raw) return null;
-      
-      const data = JSON.parse(raw);
-      
-      // Check if draft is too old (older than 24 hours)
-      const timestamp = parseInt(localStorage.getItem(DRAFT_KEY + '_timestamp') || '0');
-      const now = Date.now();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      if (timestamp && (now - timestamp > maxAge)) {
-        console.log('Draft is too old, clearing it');
-        clearDraft();
-        return null;
-      }
-      
-      return data;
-    } catch(e) { 
-      console.error('Error loading draft:', e);
+      return raw ? JSON.parse(raw) : null; 
+    }catch{ 
       return null; 
     } 
   }
@@ -454,23 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem(DRAFT_KEY); 
       localStorage.removeItem(DRAFT_KEY + '_timestamp');
       sessionStorage.removeItem(SESSION_KEY);
-      return true;
-    } catch(e) {
-      console.error('Error clearing draft:', e);
-      return false;
-    } 
+    }catch{} 
   }
   
   // Initialize form based on whether it's a fresh creation or refresh
   function initializeForm() {
-    // Create a draft save indicator if it doesn't exist
-    if (!document.getElementById('draft-save-indicator')) {
-      const indicator = document.createElement('div');
-      indicator.id = 'draft-save-indicator';
-      indicator.style.cssText = 'position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity 0.3s ease;';
-      document.body.appendChild(indicator);
-    }
-    
     if (isFreshFormCreation()) {
       // Fresh form creation - clear any existing draft and start clean
       clearDraft();
@@ -488,14 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const draftData = loadDraft();
       if (draftData) {
         console.log('Page refresh detected - restoring form data');
-        const restored = restoreForm(draftData);
-        if (!restored) {
-          console.warn('Failed to restore draft data, starting with empty form');
-          if (tpl && items) {
-            addRow();
-            recalcTotals();
-          }
-        }
+        restoreForm(draftData);
       } else {
         // No draft data but not a fresh creation - add default row
         if (tpl && items) {
@@ -506,50 +406,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Save on changes with debounce
-  let saveTimeout = null;
-  function debouncedSave() {
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveDraft, 500); // 500ms debounce
-  }
-  
-  formEl.addEventListener('input', debouncedSave);
-  formEl.addEventListener('change', debouncedSave);
-  
-  // Also save periodically to prevent data loss
-  const autoSaveInterval = setInterval(saveDraft, DRAFT_AUTOSAVE_INTERVAL);
+  // Save on changes
+  formEl.addEventListener('input', saveDraft);
+  formEl.addEventListener('change', saveDraft);
   
   // Initialize the form
   initializeForm();
   
-  // Clear on successful submit
-  formEl.addEventListener('submit', (e) => {
-    // Save one last time before submitting in case validation fails
-    saveDraft();
-    
-    // Set a flag to clear draft on successful submission
-    sessionStorage.setItem('po_form_submitted', 'true');
-  });
-  
-  // Check if we need to clear the draft (after successful submission and redirect back)
-  if (sessionStorage.getItem('po_form_submitted') === 'true') {
-    clearDraft();
-    sessionStorage.removeItem('po_form_submitted');
-    
-    // Show success message if we're coming back after a successful submission
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('success')) {
-      const successMessage = document.createElement('div');
-      successMessage.className = 'alert alert-success';
-      successMessage.textContent = 'Purchase Order created successfully!';
-      formEl.prepend(successMessage);
-    }
-  }
-  
-  // Clean up on page unload
-  window.addEventListener('beforeunload', () => {
-    clearInterval(autoSaveInterval);
-  });
+  // Clear on successful submit (let server redirect first; best effort)
+  formEl.addEventListener('submit', ()=>{ clearDraft(); });
 });
 
 // Number-only validation for financial inputs
@@ -567,20 +432,6 @@ function enforcePositiveNumberOnly(input) {
     const num = parseFloat(value);
     if (num < 0 || isNaN(num)) {
       value = '';
-      // Show validation error
-      this.classList.add('is-invalid');
-      let feedback = this.parentNode.querySelector('.invalid-feedback');
-      if (!feedback) {
-        feedback = document.createElement('div');
-        feedback.className = 'invalid-feedback';
-        this.parentNode.appendChild(feedback);
-      }
-      feedback.textContent = 'Please enter a positive number';
-    } else {
-      // Clear validation error
-      this.classList.remove('is-invalid');
-      const feedback = this.parentNode.querySelector('.invalid-feedback');
-      if (feedback) feedback.remove();
     }
     this.value = value;
   });
@@ -588,10 +439,6 @@ function enforcePositiveNumberOnly(input) {
   input.addEventListener('blur', function() {
     if (this.value === '' || this.value === '.') {
       this.value = '0.00';
-      // Clear validation error on valid default
-      this.classList.remove('is-invalid');
-      const feedback = this.parentNode.querySelector('.invalid-feedback');
-      if (feedback) feedback.remove();
     } else {
       const num = parseFloat(this.value);
       this.value = isNaN(num) ? '0.00' : num.toFixed(2);
@@ -613,72 +460,6 @@ function enforcePositiveNumberOnly(input) {
 // Apply number-only validation to all financial inputs
 document.querySelectorAll('.number-only-input:not([readonly])').forEach(input => {
   enforcePositiveNumberOnly(input);
-});
-
-// Form validation before submission
-document.addEventListener('DOMContentLoaded', () => {
-  const formEl = document.getElementById('poForm');
-  if (formEl) {
-    formEl.addEventListener('submit', function(e) {
-      let isValid = true;
-      
-      // Validate supplier
-      const supplierSelect = document.getElementById('supplier-select');
-      if (supplierSelect && supplierSelect.value === '') {
-        showValidationError(supplierSelect, 'Please select a supplier');
-        isValid = false;
-      }
-      
-      // If new supplier is selected, validate required fields
-      if (supplierSelect && supplierSelect.value === '__manual__') {
-        const supplierName = document.getElementById('supplier-name');
-        if (!supplierName.value.trim()) {
-          showValidationError(supplierName, 'Supplier name is required');
-          isValid = false;
-        }
-      }
-      
-      // Validate items (at least one item is required)
-      const itemRows = document.querySelectorAll('#items .item-row');
-      if (itemRows.length === 0) {
-        const itemsContainer = document.getElementById('items');
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'alert alert-danger';
-        errorDiv.textContent = 'At least one item is required';
-        itemsContainer.appendChild(errorDiv);
-        isValid = false;
-      }
-      
-      if (!isValid) {
-        e.preventDefault();
-        // Save draft even if validation fails
-        if (typeof saveDraft === 'function') saveDraft();
-        
-        // Scroll to the first error
-        const firstError = document.querySelector('.is-invalid');
-        if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-      
-      return isValid;
-    });
-  }
-  
-  // Helper function to show validation errors
-  function showValidationError(inputElement, message) {
-    // Add error class to input
-    inputElement.classList.add('is-invalid');
-    
-    // Create and append error message if it doesn't exist
-    let feedback = inputElement.parentNode.querySelector('.invalid-feedback');
-    if (!feedback) {
-      feedback = document.createElement('div');
-      feedback.className = 'invalid-feedback';
-      inputElement.parentNode.appendChild(feedback);
-    }
-    feedback.textContent = message;
-  }
 });
 
 // Note: Datepickers are now initialized directly in the view file using simple jQuery

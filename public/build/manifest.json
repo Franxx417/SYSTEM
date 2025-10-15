@@ -93,7 +93,7 @@
     "isEntry": true
   },
   "resources/js/pages/items-index.js": {
-    "file": "assets/items-index-CQ1grLBf.js",
+    "file": "assets/items-index-BBQrdvk8.js",
     "name": "items-index",
     "src": "resources/js/pages/items-index.js",
     "isEntry": true
@@ -110,20 +110,14 @@
     "src": "resources/js/pages/po-edit-extras.js",
     "isEntry": true
   },
-  "resources/js/pages/po-edit-modal.js": {
-    "file": "assets/po-edit-modal-F0Mg9PWD.js",
-    "name": "po-edit-modal",
-    "src": "resources/js/pages/po-edit-modal.js",
-    "isEntry": true
-  },
   "resources/js/pages/po-edit.js": {
-    "file": "assets/po-edit-eGj3yhvE.js",
+    "file": "assets/po-edit-C6X5fGTk.js",
     "name": "po-edit",
     "src": "resources/js/pages/po-edit.js",
     "isEntry": true
   },
   "resources/js/pages/po-index.js": {
-    "file": "assets/po-index-BdnX1hB7.js",
+    "file": "assets/po-index-A7k_FaF5.js",
     "name": "po-index",
     "src": "resources/js/pages/po-index.js",
     "isEntry": true
@@ -150,6 +144,12 @@
     "file": "assets/status-color-sync-DcoSHV44.js",
     "name": "status-color-sync",
     "src": "resources/js/status-color-sync.js",
+    "isEntry": true
+  },
+  "resources/js/system-status.js": {
+    "file": "assets/system-status-DeSEZYYK.js",
+    "name": "system-status",
+    "src": "resources/js/system-status.js",
     "isEntry": true
   }
 }

@@ -4,50 +4,33 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="fas fa-file-invoice me-2"></i>All Purchase Orders</h6>
-                <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control form-control-sm" id="searchPO" placeholder="Search by PO#, Purpose, or Supplier..." style="width: 300px;">
-                    <select class="form-select form-select-sm" id="filterStatus" style="width: 150px;">
-                        <option value="">All Status</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Verified">Verified</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Received">Received</option>
-                        <option value="Rejected">Rejected</option>
-                    </select>
-                </div>
+                <a href="{{ route('po.index') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-external-link-alt me-1"></i>Go to Purchase Orders
+                </a>
             </div>
             <div class="card-body">
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <div class="small">Total POs</div>
-                                        <div class="h4">{{ $metrics['total_pos'] ?? 0 }}</div>
-                                    </div>
-                                    <i class="fas fa-file-invoice fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                        </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-8 text-center py-5">
+                        <img src="{{ asset('images/redirect.svg') }}" alt="Redirect" class="img-fluid mb-4" style="max-width: 200px;">
+                        <h4>Purchase Orders Management</h4>
+                        <p class="text-muted">All purchase order management has been consolidated to the main Purchase Orders section.</p>
+                        <p>Please use the button below to access the Purchase Orders management page:</p>
+                        <a href="{{ route('po.index') }}" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt me-1"></i>Go to Purchase Orders
+                        </a>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-warning text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <div class="small">Pending</div>
-                                        <div class="h4">{{ $metrics['pending_pos'] ?? 0 }}</div>
-                                    </div>
-                                    <i class="fas fa-clock fa-2x opacity-75"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Automatically redirect to the PO index page
+    document.addEventListener('DOMContentLoaded', function() {
+        window.location.href = "{{ route('po.index') }}";
+    });
+</script>
                                     <div>
                                         <div class="small">Approved</div>
                                         <div class="h4">{{ DB::table('approvals')->join('statuses', 'approvals.status_id', '=', 'statuses.status_id')->where('statuses.status_name', 'Approved')->count() }}</div>
@@ -958,6 +941,7 @@ document.getElementById('confirmStatusChange')?.addEventListener('click', functi
         btn.disabled = false;
     });
 });
+
 </script>
 
 <style>
@@ -1365,3 +1349,10 @@ html {
     margin-bottom: 0;
 }
 </style>
+
+<!-- Toast Container for Notifications -->
+<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 5;"></div>
+
+@push('scripts')
+<script src="{{ asset('js/dashboards/superadmin-po-actions.js') }}"></script>
+@endpush
