@@ -1,4 +1,7 @@
 // PO Index: modal view handler for My Purchase Orders
+// Import direct print functionality
+import './po-print-direct.js';
+
 document.addEventListener('DOMContentLoaded', function(){
   var table = document.getElementById('po-index-table');
   if (!table) return;

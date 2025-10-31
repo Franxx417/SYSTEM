@@ -12,11 +12,16 @@ use App\Http\Controllers\ItemsController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\ConstantsController;
+use App\Http\Controllers\BrandingController;
 
 // Landing: redirect to login
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// Dynamic branding CSS
+Route::get('/branding/dynamic.css', [BrandingController::class, 'css'])->name('branding.css');
 
 // Login / Logout
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -143,6 +148,10 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::post('/password', [SettingsController::class, 'updatePassword'])->name('password.update');
     Route::post('/logo/upload', [SettingsController::class, 'uploadLogo'])->name('logo.upload');
     Route::delete('/logo/remove', [SettingsController::class, 'removeLogo'])->name('logo.remove');
+    Route::post('/preferences', [SettingsController::class, 'updatePreferences'])->name('preferences.update');
+    Route::get('/preferences', [SettingsController::class, 'getPreferences'])->name('preferences.get');
+    Route::post('/notifications', [SettingsController::class, 'updateNotifications'])->name('notifications.update');
+    Route::get('/notifications', [SettingsController::class, 'getNotifications'])->name('notifications.get');
 });
 
 // Status management routes (used by Dashboard Status Configuration)
@@ -156,4 +165,11 @@ Route::prefix('status')->name('status.')->group(function () {
 
 // Dynamic CSS route
 Route::get('/css/dynamic-status.css', [SettingsController::class, 'dynamicStatusCss'])->name('dynamic.status.css');
+
+// Constants routes
+Route::get('/api/constants/public', [ConstantsController::class, 'getPublicConstants'])->name('constants.public');
+Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
+    Route::get('/constants', [ConstantsController::class, 'getAllConstants'])->name('constants.all');
+    Route::post('/constants/update', [ConstantsController::class, 'updateConstant'])->name('constants.update');
+});
 

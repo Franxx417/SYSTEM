@@ -12,14 +12,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Approval actions for each role:
- * - Finance: verify
- * - Department head: approve
- * - Authorized personnel: receive
+ * Approval actions - Only superadmin can perform these actions
  */
 class ApprovalController extends Controller
 {
-    /** Get current session user or 403 - SUPERADMIN HAS UNRESTRICTED ACCESS */
+    /** Get current session user or 403 */
     private function auth(Request $request): array
     {
         $auth = $request->session()->get('auth_user');
@@ -27,12 +24,12 @@ class ApprovalController extends Controller
         return $auth;
     }
 
-    /** Mark PO as Received - SUPERADMIN HAS UNRESTRICTED ACCESS */
+    /** Mark PO as Received - Only superadmin */
     public function receive(Request $request, string $poId)
     {
         $auth = $this->auth($request);
-        // SUPERADMIN HAS UNRESTRICTED ACCESS TO EVERYTHING
-        if ($auth['role'] !== 'authorized_personnel' && $auth['role'] !== 'superadmin') {
+        // Only superadmin can mark as received
+        if ($auth['role'] !== 'superadmin') {
             abort(403);
         }
         DB::table('approvals')->where('purchase_order_id', $poId)->update([

@@ -239,4 +239,165 @@ class SettingsController extends Controller
         .badge.status-cancelled { background-color: #6c757d !important; color: #fff !important; }
         ";
     }
+    
+    /**
+     * Update user preferences
+     */
+    public function updatePreferences(Request $request)
+    {
+        $auth = session('auth_user');
+        
+        if (!$auth || !isset($auth['user_id'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $validator = Validator::make($request->all(), [
+            'language' => 'required|in:en,fil,zh',
+            'date_format' => 'required|in:MM/DD/YYYY,DD/MM/YYYY,YYYY-MM-DD',
+            'time_format' => 'required|in:12,24',
+            'timezone' => 'required|string|max:100',
+            'auto_save' => 'boolean',
+            'compact_view' => 'boolean',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            $userId = $auth['user_id'];
+            
+            // Store preferences in settings table with user-specific keys
+            Setting::set("user.{$userId}.language", $request->language);
+            Setting::set("user.{$userId}.date_format", $request->date_format);
+            Setting::set("user.{$userId}.time_format", $request->time_format);
+            Setting::set("user.{$userId}.timezone", $request->timezone);
+            Setting::set("user.{$userId}.auto_save", $request->boolean('auto_save'));
+            Setting::set("user.{$userId}.compact_view", $request->boolean('compact_view'));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Preferences saved successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save preferences: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get user preferences
+     */
+    public function getPreferences()
+    {
+        $auth = session('auth_user');
+        
+        if (!$auth || !isset($auth['user_id'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userId = $auth['user_id'];
+        
+        $preferences = [
+            'language' => Setting::get("user.{$userId}.language", 'en'),
+            'date_format' => Setting::get("user.{$userId}.date_format", 'DD/MM/YYYY'),
+            'time_format' => Setting::get("user.{$userId}.time_format", '12'),
+            'timezone' => Setting::get("user.{$userId}.timezone", 'Asia/Manila'),
+            'auto_save' => (bool) Setting::get("user.{$userId}.auto_save", true),
+            'compact_view' => (bool) Setting::get("user.{$userId}.compact_view", false),
+        ];
+        
+        return response()->json([
+            'success' => true,
+            'preferences' => $preferences
+        ]);
+    }
+    
+    /**
+     * Update notification settings
+     */
+    public function updateNotifications(Request $request)
+    {
+        $auth = session('auth_user');
+        
+        if (!$auth || !isset($auth['user_id'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $validator = Validator::make($request->all(), [
+            'notif_po_created' => 'boolean',
+            'notif_po_approved' => 'boolean',
+            'notif_po_rejected' => 'boolean',
+            'notif_system_updates' => 'boolean',
+            'notif_security' => 'boolean',
+            'email_daily_summary' => 'boolean',
+            'email_weekly_report' => 'boolean',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            $userId = $auth['user_id'];
+            
+            // Store notification preferences
+            Setting::set("user.{$userId}.notif_po_created", $request->boolean('notif_po_created'));
+            Setting::set("user.{$userId}.notif_po_approved", $request->boolean('notif_po_approved'));
+            Setting::set("user.{$userId}.notif_po_rejected", $request->boolean('notif_po_rejected'));
+            Setting::set("user.{$userId}.notif_system_updates", $request->boolean('notif_system_updates'));
+            Setting::set("user.{$userId}.notif_security", $request->boolean('notif_security'));
+            Setting::set("user.{$userId}.email_daily_summary", $request->boolean('email_daily_summary'));
+            Setting::set("user.{$userId}.email_weekly_report", $request->boolean('email_weekly_report'));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification settings saved successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save notification settings: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get notification settings
+     */
+    public function getNotifications()
+    {
+        $auth = session('auth_user');
+        
+        if (!$auth || !isset($auth['user_id'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $userId = $auth['user_id'];
+        
+        $notifications = [
+            'notif_po_created' => (bool) Setting::get("user.{$userId}.notif_po_created", true),
+            'notif_po_approved' => (bool) Setting::get("user.{$userId}.notif_po_approved", true),
+            'notif_po_rejected' => (bool) Setting::get("user.{$userId}.notif_po_rejected", true),
+            'notif_system_updates' => (bool) Setting::get("user.{$userId}.notif_system_updates", true),
+            'notif_security' => (bool) Setting::get("user.{$userId}.notif_security", false),
+            'email_daily_summary' => (bool) Setting::get("user.{$userId}.email_daily_summary", false),
+            'email_weekly_report' => (bool) Setting::get("user.{$userId}.email_weekly_report", false),
+        ];
+        
+        return response()->json([
+            'success' => true,
+            'notifications' => $notifications
+        ]);
+    }
 }

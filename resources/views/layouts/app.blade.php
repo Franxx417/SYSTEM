@@ -20,12 +20,35 @@
         'resources/js/components/status-management.js'
     ])
     <link rel="stylesheet" href="{{ route('dynamic.status.css') }}">
+    <link rel="stylesheet" href="{{ route('branding.css') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     @stack('styles')
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load constants for frontend use
+        @php
+            $constKeys = [
+                'notifications.auto_dismiss_delay',
+                'notifications.max_notifications',
+                'monitoring.auto_refresh_interval',
+                'ui.table_responsive_breakpoint',
+                'ui.modal_max_width',
+                'ui.sidebar_width',
+                'app.name',
+                'app.version',
+                'pagination.default_limit',
+                'pagination.dashboard_recent_limit',
+                'pagination.dashboard_suppliers_limit',
+                'pagination.dashboard_users_limit',
+                'pagination.dashboard_statuses_limit',
+                'pagination.logs_limit'
+            ];
+        @endphp
+        window.constants = @json(app('App\Services\ConstantsService')->getMultiple($constKeys));
+    </script>
     <style>
         .sidebar { 
             width: 240px; 
@@ -225,21 +248,12 @@
     <div class="d-flex">
         <nav class="sidebar border-end bg-white position-fixed top-0 bottom-0" id="sidebar">
             <div class="p-3 border-bottom d-flex align-items-center gap-2">
-                @php
-                    $logo = null; $appName = 'Procurement';
-                    try {
-                        if (\Illuminate\Support\Facades\Schema::hasTable('settings')) {
-                            $logo = \Illuminate\Support\Facades\DB::table('settings')->where('key','branding.logo_path')->value('value');
-                            $appName = \Illuminate\Support\Facades\DB::table('settings')->where('key','app.name')->value('value') ?? 'Procurement';
-                        }
-                    } catch (\Throwable $e) { /* ignore until settings exist */ }
-                @endphp
-                @if($logo)
-                    <img src="{{ $logo }}" alt="Logo" style="height:28px;width:auto"/>
+                @if(isset($brandingService) && $brandingService->hasLogo())
+                    <img src="{{ $brandingService->getLogoPath() }}" alt="Logo" style="height:{{ $brandingService->getLogoSize() }}px;width:auto"/>
                 @endif
                 <div>
-                    <div class="fw-bold">{{ $appName }}</div>
-                    <div class="text-muted small">Management System</div>
+                    <div class="fw-bold">{{ isset($brandingService) ? $brandingService->getAppName() : config('app.name', 'CDN') }}</div>
+                    <div class="text-muted small">{{ isset($brandingService) ? $brandingService->getAppTagline() : 'Management System' }}</div>
                 </div>
             </div>
             <ul class="nav flex-column p-2">
@@ -292,9 +306,6 @@
                             <div class="text-end">
                                 <div class="fw-semibold">{{ $auth['name'] ?? '' }}</div>
                                 <div class="text-muted small">{{ $auth['department'] ?? '' }}</div>
-                                @if($auth && $auth['role'] === 'superadmin')
-                                    <div class="badge bg-danger small">SUPERADMIN - UNRESTRICTED ACCESS</div>
-                                @endif
                             </div>
                             <div class="dropdown">
                                 <button class="btn btn-link text-decoration-none p-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
@@ -359,9 +370,6 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><h6 class="dropdown-header">{{ $auth['name'] ?? '' }}</h6></li>
                                 <li><span class="dropdown-item-text small text-muted">{{ $auth['department'] ?? '' }}</span></li>
-                                @if($auth && $auth['role'] === 'superadmin')
-                                    <li><span class="dropdown-item-text"><span class="badge bg-danger small">SUPERADMIN ACCESS</span></span></li>
-                                @endif
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ route('settings.index') }}">

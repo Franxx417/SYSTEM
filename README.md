@@ -1,6 +1,6 @@
 ## Procurement System (Laravel 12 + SQL Server)
 
-This is a role‑based procurement workflow with online approvals built on Laravel 12 and SQL Server. It includes login, role‑specific dashboards (requestor, finance controller, department head, authorized personnel), purchase order creation with items, supplier management, and approval actions.
+This is a role‑based procurement workflow with online approvals built on Laravel 12 and SQL Server. It includes login, role‑specific dashboards, purchase order creation with items, supplier management, and approval actions. The system supports two role types: **requestor** (for creating and managing purchase orders) and **superadmin** (for system administration and approvals).
 
 ### Prerequisites
 - PHP 8.2+ (with `ext-fileinfo`, `ext-mbstring`)
@@ -66,16 +66,14 @@ php artisan db:seed --ansi
 ```
 
 Seeders populate:
-- Role types: requestor, finance_controller, department_head, authorized_personnel
+- Role types: requestor, superadmin
 - Statuses: Draft, Verified, Approved, Received, Rejected
 - Users, login, and roles (test accounts below)
 - Suppliers (sample), purchase orders, items, and approvals (sample history)
 
 Test accounts (username / password):
-- admin / admin123  (requestor)
-- finance / finance123  (finance_controller)
-- dept_head / dept123  (department_head)
-- auth_personnel / auth123  (authorized_personnel)
+- superadmin / superadmin123  (superadmin)
+- requestor / requestor123  (requestor)
 
 ### 5) Frontend assets
 Bootstrap 5.3.7 is wired via Vite.

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Services\ConstantsService;
 
 class StatusController extends Controller
 {
@@ -273,7 +274,7 @@ class StatusController extends Controller
     public function config(Request $request)
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth || !in_array($auth['role'], ['superadmin', 'authorized_personnel'], true)) {
+        if (!$auth || $auth['role'] !== 'superadmin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

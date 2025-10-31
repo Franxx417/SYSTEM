@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (alert && alert.parentNode) {
                 alert.remove();
             }
-        }, 5000);
+        }, window.constants?.notifications?.auto_dismiss_delay || 5000);
     });
 });
 

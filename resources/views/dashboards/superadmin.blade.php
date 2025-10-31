@@ -68,7 +68,6 @@
 
 @php($active = request()->get('tab','overview'))
 @php($tabMap = [
-    'purchase-orders' => 'pos',
     'user-management' => 'users',
     'security' => 'security',
     'system' => 'system',

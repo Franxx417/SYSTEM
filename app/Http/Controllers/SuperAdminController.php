@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
+use App\Services\SystemMonitoringService;
+use App\Services\ConstantsService;
 use PDO;
 
 class SuperAdminController extends Controller
@@ -123,7 +125,13 @@ class SuperAdminController extends Controller
             }
 
             if (Schema::hasTable('login')) {
-                $metrics['active_sessions'] = DB::table('login')->whereNull('logout_time')->count();
+                // Check if logout_time column exists
+                if (Schema::hasColumn('login', 'logout_time')) {
+                    $metrics['active_sessions'] = DB::table('login')->whereNull('logout_time')->count();
+                } else {
+                    // If logout_time doesn't exist, count all login records as active
+                    $metrics['active_sessions'] = DB::table('login')->count();
+                }
             }
 
         } catch (\Throwable $e) {
@@ -131,12 +139,7 @@ class SuperAdminController extends Controller
             Log::error('SuperAdmin dashboard data loading error: ' . $e->getMessage());
         }
             
-        $securitySettings = [
-            'session_timeout' => $settings['security.session_timeout'] ?? 120,
-            'max_login_attempts' => $settings['security.max_login_attempts'] ?? 5,
-            'force_password_change' => ($settings['security.force_password_change'] ?? 'false') === 'true',
-            'enable_2fa' => ($settings['security.enable_2fa'] ?? 'false') === 'true'
-        ];
+        $securitySettings = ConstantsService::getSecuritySettings();
         
         $securityAlerts = $this->getSecurityAlerts();
         
@@ -150,11 +153,15 @@ class SuperAdminController extends Controller
         $recentActivity = $this->getRecentActivity();
         $userStats = $this->getUserStats();
         $activeSessions = $this->getActiveSessions();
+        
+        // Get comprehensive system performance metrics
+        $systemMonitoring = new SystemMonitoringService();
+        $systemMetrics = $systemMonitoring->getSystemMetrics();
 
         return view('superadmin.dashboard', compact(
             'settings', 'metrics', 'recentPOs', 'suppliers', 'statuses',
             'allUsers', 'userStats', 'activeSessions', 'securitySettings', 'securityAlerts',
-            'dbStats', 'recentActivity'
+            'dbStats', 'recentActivity', 'systemMetrics'
         ));
     }
 
@@ -163,24 +170,77 @@ class SuperAdminController extends Controller
         // Check superadmin access
         $this->requireSuperadmin($request);
         
-        $request->validate([
-            'app_name' => ['nullable','string','max:100'],
-            // Allow SVG explicitly; some Laravel versions reject SVG with the 'image' rule
+        // Validate all branding inputs
+        $validated = $request->validate([
+            'app_name' => ['required','string','max:100'],
+            'app_tagline' => ['nullable','string','max:150'],
+            'app_description' => ['nullable','string','max:255'],
             'logo' => ['nullable','file','mimes:png,jpg,jpeg,svg','max:2048'],
+            'logo_position' => ['nullable','string','in:left,center,right'],
+            'logo_size' => ['nullable','integer','min:30','max:100'],
+            'primary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+            'secondary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+            'font_family' => ['nullable','string','max:50'],
+            'font_size' => ['nullable','numeric','min:12','max:18'],
         ]);
-        if ($request->filled('app_name')) {
-            DB::table('settings')->updateOrInsert(['key' => 'app.name'], [
-                'value' => $request->string('app_name'), 'updated_at' => now(), 'created_at' => now()
-            ]);
+
+        // Update application info
+        $settingsToUpdate = [
+            'app.name' => $validated['app_name'],
+            'app.tagline' => $validated['app_tagline'] ?? '',
+            'app.description' => $validated['app_description'] ?? '',
+            'branding.logo_position' => $validated['logo_position'] ?? 'left',
+            'branding.logo_size' => $validated['logo_size'] ?? 50,
+            'branding.primary_color' => $validated['primary_color'] ?? '#0d6efd',
+            'branding.secondary_color' => $validated['secondary_color'] ?? '#6c757d',
+            'branding.accent_color' => $validated['accent_color'] ?? '#198754',
+            'branding.font_family' => $validated['font_family'] ?? 'system-ui',
+            'branding.font_size' => $validated['font_size'] ?? 14,
+        ];
+
+        foreach ($settingsToUpdate as $key => $value) {
+            DB::table('settings')->updateOrInsert(
+                ['key' => $key],
+                ['value' => $value, 'updated_at' => now(), 'created_at' => now()]
+            );
         }
+
+        // Handle logo upload
         if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('public/branding');
-            $public = Storage::url($path);
-            DB::table('settings')->updateOrInsert(['key' => 'branding.logo_path'], [
-                'value' => $public, 'updated_at' => now(), 'created_at' => now()
-            ]);
+            try {
+                // Delete old logo if exists
+                $oldLogo = DB::table('settings')->where('key', 'branding.logo_path')->value('value');
+                if ($oldLogo) {
+                    $oldPath = str_replace('/storage/', 'public/', $oldLogo);
+                    if (Storage::exists($oldPath)) {
+                        Storage::delete($oldPath);
+                    }
+                }
+
+                // Store new logo
+                $path = $request->file('logo')->store('public/branding');
+                $public = Storage::url($path);
+                
+                DB::table('settings')->updateOrInsert(
+                    ['key' => 'branding.logo_path'],
+                    ['value' => $public, 'updated_at' => now(), 'created_at' => now()]
+                );
+            } catch (\Exception $e) {
+                return back()->with('warning', 'Branding updated but logo upload failed: ' . $e->getMessage());
+            }
         }
-        return back()->with('status','Branding updated');
+
+        // Clear caches to ensure changes are reflected
+        try {
+            Artisan::call('view:clear');
+            // Clear branding service cache
+            app(\App\Services\BrandingService::class)->clearCache();
+        } catch (\Exception $e) {
+            // Silently fail if cache clear doesn't work
+        }
+
+        return back()->with('status', 'Branding settings updated successfully!');
     }
 
     public function systemAction(Request $request)
@@ -490,11 +550,12 @@ class SuperAdminController extends Controller
                         
                         $tables[] = [
                             'name' => $table,
-                            'count' => $count,
-                            'columns' => count($columns),
-                            'column_names' => $columns,
-                            'size' => $size,
-                            'status' => 'OK'
+                            'count' => is_numeric($count) ? (int)$count : 0,
+                            'columns' => is_array($columns) ? count($columns) : 0,
+                            'column_names' => is_array($columns) ? $columns : [],
+                            'size' => !empty($size) ? $size : 'N/A',
+                            'status' => 'OK',
+                            'error' => null
                         ];
                     } else {
                         $tables[] = [
@@ -503,13 +564,19 @@ class SuperAdminController extends Controller
                             'columns' => 0,
                             'column_names' => [],
                             'size' => 'N/A',
-                            'status' => 'Missing'
+                            'status' => 'Missing',
+                            'error' => 'Table does not exist in database'
                         ];
                     }
                 } catch (\Exception $e) {
+                    Log::warning("Failed to get info for table {$table}", [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    
                     $tables[] = [
                         'name' => $table,
-                        'count' => 'Error',
+                        'count' => null,
                         'columns' => 0,
                         'column_names' => [],
                         'size' => 'N/A',
@@ -1319,7 +1386,13 @@ class SuperAdminController extends Controller
     {
         try {
             if (Schema::hasTable('login')) {
-                return (int) DB::table('login')->whereNull('logout_time')->count();
+                // Check if logout_time column exists
+                if (Schema::hasColumn('login', 'logout_time')) {
+                    return (int) DB::table('login')->whereNull('logout_time')->count();
+                } else {
+                    // If logout_time doesn't exist, count all login records as active
+                    return (int) DB::table('login')->count();
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('Failed to get active sessions count: ' . $e->getMessage());
@@ -1544,8 +1617,8 @@ class SuperAdminController extends Controller
                 }
             }
 
-            // Get metrics with individual error handling and timeouts
-            $metrics = [
+            // Get basic application metrics
+            $appMetrics = [
                 'total_pos' => $this->getTableCountSafely('purchase_orders'),
                 'pending_pos' => $this->getPendingPOCountSafely(),
                 'suppliers' => $this->getTableCountSafely('suppliers'),
@@ -1557,6 +1630,15 @@ class SuperAdminController extends Controller
                 'total_records' => $this->getTotalRecordsSafely(),
                 'timestamp' => now()->toISOString()
             ];
+            
+            // Get comprehensive system performance metrics
+            $systemMonitoring = new SystemMonitoringService();
+            $systemMetrics = $systemMonitoring->getSystemMetrics();
+            
+            // Combine all metrics
+            $metrics = array_merge($appMetrics, [
+                'system_performance' => $systemMetrics
+            ]);
 
             return response()->json([
                 'success' => true,

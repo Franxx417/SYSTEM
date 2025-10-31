@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PO {{ $po->purchase_order_no }}</title>
+    <title>PO {{ $po->purchase_order_no }} - {{ $companyName ?? 'Procurement System' }}</title>
     <style>
         @page { 
             size: A4; 
@@ -14,7 +14,7 @@
             min-height: 297mm;
             margin: 0;
             padding: 0;
-            font-family: Calibri, 'Calibri Body', Arial, Helvetica, sans-serif; 
+            font-family: {{ isset($branding['font_family']) ? $branding['font_family'] : 'Calibri' }}, 'Calibri Body', Arial, Helvetica, sans-serif; 
             color: #111;
             font-size: 10pt;
             line-height: 1.4;
@@ -54,7 +54,7 @@
         .small { font-size:9pt; color:#000; }
         .meta { width:260px; margin-top:8px; }
         .signatures { 
-            width: 70%; 
+            width: 75%; 
             margin: 40px auto 0 auto;
         }
         .sig-line { 

@@ -69,11 +69,99 @@
     </div>
 </div>
 
+<!-- System Performance Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>System Performance Monitoring
+                </h6>
+                <button class="btn btn-outline-primary btn-sm" data-action="refresh-metrics">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- CPU Usage -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-microchip text-primary" style="font-size: 28px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">CPU Usage</div>
+                                <div class="h5 mb-0" data-metric="cpu_usage">
+                                    {{ $systemMetrics['cpu']['usage_percent'] ?? 0 }}%
+                                </div>
+                                <div class="text-muted small">{{ $systemMetrics['cpu']['cores'] ?? 1 }} cores</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Memory Usage -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-memory text-success" style="font-size: 28px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Memory Usage</div>
+                                <div class="h5 mb-0" data-metric="memory_usage">
+                                    {{ $systemMetrics['memory']['system']['usage_percent'] ?? 0 }}%
+                                </div>
+                                <div class="text-muted small">{{ $systemMetrics['memory']['system']['used_formatted'] ?? '0 B' }} / {{ $systemMetrics['memory']['system']['total_formatted'] ?? '0 B' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Disk Usage -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-hdd text-warning" style="font-size: 28px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Disk Usage</div>
+                                <div class="h5 mb-0" data-metric="disk_usage">
+                                    {{ $systemMetrics['disk']['usage_percent'] ?? 0 }}%
+                                </div>
+                                <div class="text-muted small">{{ $systemMetrics['disk']['used_formatted'] ?? '0 B' }} / {{ $systemMetrics['disk']['total_formatted'] ?? '0 B' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Network Activity -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-network-wired text-info" style="font-size: 28px;"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Active Connections</div>
+                                <div class="h5 mb-0" data-metric="network_connections">
+                                    {{ $systemMetrics['network']['active_connections'] ?? 0 }}
+                                </div>
+                                <div class="text-muted small">
+                                    DB: <span class="badge bg-{{ $systemMetrics['network']['database_connectivity'] ? 'success' : 'danger' }}">
+                                        {{ $systemMetrics['network']['database_connectivity'] ? 'OK' : 'Error' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <!-- Application Activity -->
+        <div class="card border-0 shadow-sm mb-3">
             <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>System Activity</h6>
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Application Activity</h6>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -118,6 +206,63 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Details -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">PHP Information</h6>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Version:</span>
+                                <span>{{ $systemMetrics['php']['version'] ?? 'Unknown' }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Memory Limit:</span>
+                                <span>{{ $systemMetrics['php']['memory_limit'] ?? 'Unknown' }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Max Execution Time:</span>
+                                <span>{{ $systemMetrics['php']['max_execution_time'] ?? 'Unknown' }}s</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>OPcache:</span>
+                                <span class="badge bg-{{ $systemMetrics['php']['opcache_enabled'] ? 'success' : 'warning' }}">
+                                    {{ $systemMetrics['php']['opcache_enabled'] ? 'Enabled' : 'Disabled' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Database Performance</h6>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Connection:</span>
+                                <span class="badge bg-{{ $systemMetrics['database']['connection_status'] ? 'success' : 'danger' }}">
+                                    {{ $systemMetrics['database']['connection_status'] ? 'Connected' : 'Error' }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Query Time:</span>
+                                <span>{{ $systemMetrics['database']['performance']['avg_query_time'] ?? 0 }}ms</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Database Size:</span>
+                                <span>{{ $systemMetrics['database']['size']['total_formatted'] ?? '0 B' }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Uptime:</span>
+                                <span>{{ $systemMetrics['uptime']['formatted'] ?? 'Unknown' }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

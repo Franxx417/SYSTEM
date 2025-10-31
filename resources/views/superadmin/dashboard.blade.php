@@ -10,6 +10,9 @@
 @section('content')
 <div class="superadmin-dashboard">
 
+@php($active = request()->get('tab','overview'))
+
+@if($active !== 'user-management')
 <!-- System Overview Cards -->
 <div class="row g-3 mb-4">
     <div class="col-lg-3 col-md-6">
@@ -65,10 +68,10 @@
         </div>
     </div>
 </div>
+@endif
 
 @php($active = request()->get('tab','overview'))
 @php($tabMap = [
-    'purchase-orders' => 'pos',
     'user-management' => 'users',
     'security' => 'security',
     'system' => 'system',

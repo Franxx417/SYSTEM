@@ -19,7 +19,7 @@ class ApprovalsSeeder extends Seeder
             ->value('roles.user_id');
         $receivedBy = DB::table('roles')
             ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
-            ->where('role_types.user_role_type', 'authorized_personnel')
+            ->where('role_types.user_role_type', 'superadmin')
             ->value('roles.user_id');
 
         $statusApproved = DB::table('statuses')->where('status_name', 'Approved')->value('status_id');

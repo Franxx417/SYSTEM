@@ -49,28 +49,83 @@ class SuperadminDashboard {
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.refreshSystemMetrics());
         }
+
+        // Auto-refresh system metrics every 30 seconds
+        this.startAutoRefresh();
     }
 
-    async refreshSystemMetrics() {
+    startAutoRefresh() {
+        // Only auto-refresh if we're on the overview tab
+        if (window.location.search.includes('tab=overview') || !window.location.search.includes('tab=')) {
+            setInterval(() => {
+                this.refreshSystemMetrics(true); // Silent refresh
+            }, 30000); // 30 seconds
+        }
+    }
+
+    async refreshSystemMetrics(silent = false) {
         try {
             const response = await this.makeRequest('/api/superadmin/metrics', 'GET');
             if (response.success) {
                 this.updateMetricsDisplay(response.data);
-                this.showNotification('System metrics refreshed successfully', 'success');
+                if (!silent) {
+                    this.showNotification('System metrics refreshed successfully', 'success');
+                }
             }
         } catch (error) {
-            this.showNotification('Failed to refresh metrics', 'error');
+            if (!silent) {
+                this.showNotification('Failed to refresh metrics', 'error');
+            }
+            console.error('System metrics refresh failed:', error);
         }
     }
 
     updateMetricsDisplay(metrics) {
-        // Update metric cards
+        // Update basic metric cards
         Object.keys(metrics).forEach(key => {
             const element = document.querySelector(`[data-metric="${key}"]`);
-            if (element) {
+            if (element && key !== 'system_performance') {
                 element.textContent = metrics[key];
             }
         });
+
+        // Update system performance metrics if available
+        if (metrics.system_performance) {
+            this.updateSystemPerformanceMetrics(metrics.system_performance);
+        }
+    }
+
+    updateSystemPerformanceMetrics(systemMetrics) {
+        // Update CPU usage
+        const cpuElement = document.querySelector('[data-metric="cpu_usage"]');
+        if (cpuElement && systemMetrics.cpu) {
+            cpuElement.textContent = `${systemMetrics.cpu.usage_percent}%`;
+        }
+
+        // Update Memory usage
+        const memoryElement = document.querySelector('[data-metric="memory_usage"]');
+        if (memoryElement && systemMetrics.memory && systemMetrics.memory.system) {
+            memoryElement.textContent = `${systemMetrics.memory.system.usage_percent}%`;
+        }
+
+        // Update Disk usage
+        const diskElement = document.querySelector('[data-metric="disk_usage"]');
+        if (diskElement && systemMetrics.disk) {
+            diskElement.textContent = `${systemMetrics.disk.usage_percent}%`;
+        }
+
+        // Update Network connections
+        const networkElement = document.querySelector('[data-metric="network_connections"]');
+        if (networkElement && systemMetrics.network) {
+            networkElement.textContent = systemMetrics.network.active_connections;
+        }
+
+        // Update database connectivity badge
+        const dbBadge = document.querySelector('.badge.bg-success, .badge.bg-danger');
+        if (dbBadge && systemMetrics.network) {
+            dbBadge.className = `badge bg-${systemMetrics.network.database_connectivity ? 'success' : 'danger'}`;
+            dbBadge.textContent = systemMetrics.network.database_connectivity ? 'OK' : 'Error';
+        }
     }
 
     // =========================
@@ -225,14 +280,7 @@ class SuperadminDashboard {
         if (forceLogoutBtn) {
             forceLogoutBtn.addEventListener('click', () => this.forceLogoutAllSessions());
         }
-
-        // Session management
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-action="terminate-session"]')) {
-                const sessionId = e.target.getAttribute('data-session-id');
-                this.terminateSession(sessionId);
-            }
-        });
+        // Active Sessions UI removed; no terminate-session bindings
     }
 
     async updateSecuritySettings(formData) {
@@ -268,26 +316,7 @@ class SuperadminDashboard {
         }
     }
 
-    async terminateSession(sessionId) {
-        if (!confirm('Are you sure you want to terminate this session?')) {
-            return;
-        }
-
-        try {
-            const response = await this.makeRequest('/api/superadmin/security/terminate-session', 'POST', {
-                session_id: sessionId
-            });
-
-            if (response.success) {
-                this.showNotification('Session terminated successfully', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                this.showNotification(response.error || 'Failed to terminate session', 'error');
-            }
-        } catch (error) {
-            this.showNotification('Failed to terminate session', 'error');
-        }
-    }
+    // terminateSession removed with Active Sessions UI
 
     // =========================
     // SYSTEM TAB FUNCTIONALITY
@@ -525,52 +554,139 @@ class SuperadminDashboard {
 
     async loadTableInfo() {
         const tableInfoDiv = document.getElementById('table-info');
-        if (!tableInfoDiv) return;
+        if (!tableInfoDiv) {
+            console.error('[Database] Table info container not found');
+            return;
+        }
 
-        tableInfoDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading table information...</div>';
+        // Show loading state
+        tableInfoDiv.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2 text-muted">Loading table information...</div>
+            </div>
+        `;
 
         try {
             const response = await this.makeRequest('/api/superadmin/database/table-info', 'GET');
 
-            if (response.success) {
+            // Debug logging in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('[Database] API Response:', response);
+                console.log('[Database] Data received:', response.data);
+            }
+
+            if (response && response.success && response.data) {
                 this.displayTableInfo(response.data, tableInfoDiv);
             } else {
-                tableInfoDiv.innerHTML = `<div class="alert alert-danger">${response.error || 'Failed to load table information'}</div>`;
+                const errorMessage = response?.error || 'Failed to load table information';
+                console.error('[Database] Error:', errorMessage);
+                tableInfoDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${errorMessage}
+                    </div>
+                `;
             }
         } catch (error) {
-            tableInfoDiv.innerHTML = '<div class="alert alert-danger">Failed to load table information</div>';
+            console.error('[Database] Load table info failed:', error);
+            tableInfoDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Error:</strong> Failed to load table information
+                    <div class="mt-2"><small>${error.message || 'Unknown error occurred'}</small></div>
+                </div>
+            `;
         }
     }
 
     displayTableInfo(tables, container) {
+        // Validate input
+        if (!tables || !Array.isArray(tables)) {
+            console.error('[Database] Invalid table data:', tables);
+            container.innerHTML = '<div class="alert alert-warning">No table data available</div>';
+            return;
+        }
+
+        if (tables.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">No tables found in database</div>';
+            return;
+        }
+
+        // Debug logging
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('[Database] Displaying', tables.length, 'tables');
+        }
+
         let html = `
-            <table class="table table-sm table-striped">
+            <table class="table table-sm table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
                         <th>Table Name</th>
-                        <th>Records</th>
-                        <th>Columns</th>
-                        <th>Size</th>
-                        <th>Actions</th>
+                        <th class="text-center">Records</th>
+                        <th class="text-center">Columns</th>
+                        <th class="text-center">Size</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
-        tables.forEach(table => {
-            const countDisplay = table.error ? 
-                `<span class="badge bg-danger" title="${table.error}">Error</span>` : 
-                `<span class="badge bg-info">${table.count || 0}</span>`;
-                
+        tables.forEach((table, index) => {
+            // Validate and sanitize table data
+            const tableName = this.sanitizeHTML(table.name || 'Unknown');
+            const tableCount = table.count !== null && table.count !== undefined ? 
+                              (typeof table.count === 'number' ? table.count : 'Error') : 0;
+            const tableColumns = table.columns !== null && table.columns !== undefined ? 
+                                (typeof table.columns === 'number' ? table.columns : 
+                                 typeof table.columns === 'object' && Array.isArray(table.columns) ? table.columns.length : 0) : 0;
+            const tableSize = table.size || 'N/A';
+            const tableStatus = table.status || 'Unknown';
+            const tableError = table.error || null;
+
+            // Determine status badge
+            let statusBadge = '';
+            switch(tableStatus.toLowerCase()) {
+                case 'ok':
+                    statusBadge = '<span class="badge bg-success">OK</span>';
+                    break;
+                case 'missing':
+                    statusBadge = '<span class="badge bg-warning">Missing</span>';
+                    break;
+                case 'error':
+                    statusBadge = `<span class="badge bg-danger" title="${this.sanitizeHTML(tableError || 'Unknown error')}">Error</span>`;
+                    break;
+                default:
+                    statusBadge = `<span class="badge bg-secondary">${tableStatus}</span>`;
+            }
+
+            // Count display
+            const countDisplay = tableError || typeof tableCount !== 'number' ? 
+                `<span class="badge bg-danger" title="${this.sanitizeHTML(tableError || 'Error retrieving count')}">Error</span>` : 
+                `<span class="badge bg-info">${tableCount.toLocaleString()}</span>`;
+            
+            // Columns display
+            const columnsDisplay = typeof tableColumns === 'number' ? 
+                `<span class="badge bg-secondary">${tableColumns}</span>` : 
+                `<span class="badge bg-warning">N/A</span>`;
+
             html += `
                 <tr>
-                    <td><strong>${table.name}</strong></td>
-                    <td>${countDisplay}</td>
-                    <td><span class="badge bg-secondary">${table.columns?.length || 0}</span></td>
-                    <td><span class="text-muted">${table.size || 'N/A'}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="superadminDashboard.viewTableDetails('${table.name}')" ${table.error ? 'disabled' : ''}>
-                            View Details
+                    <td><strong>${tableName}</strong></td>
+                    <td class="text-center">${countDisplay}</td>
+                    <td class="text-center">${columnsDisplay}</td>
+                    <td class="text-center"><span class="text-muted">${this.sanitizeHTML(tableSize)}</span></td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">
+                        <button 
+                            class="btn btn-sm btn-outline-primary" 
+                            onclick="superadminDashboard.viewTableDetails('${tableName}')" 
+                            ${tableError || tableStatus.toLowerCase() === 'error' || tableStatus.toLowerCase() === 'missing' ? 'disabled' : ''}
+                            title="${tableError || tableStatus.toLowerCase() === 'error' ? 'Cannot view details due to error' : 'View table details'}">
+                            <i class="fas fa-info-circle me-1"></i>View Details
                         </button>
                     </td>
                 </tr>
@@ -578,6 +694,31 @@ class SuperadminDashboard {
         });
 
         html += '</tbody></table>';
+        
+        // Add summary footer
+        const totalTables = tables.length;
+        const okTables = tables.filter(t => t.status && t.status.toLowerCase() === 'ok').length;
+        const errorTables = tables.filter(t => t.status && (t.status.toLowerCase() === 'error' || t.status.toLowerCase() === 'missing')).length;
+        
+        html += `
+            <div class="mt-3 p-3 bg-light rounded">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="h5 mb-0">${totalTables}</div>
+                        <div class="text-muted small">Total Tables</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="h5 mb-0 text-success">${okTables}</div>
+                        <div class="text-muted small">Healthy</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="h5 mb-0 ${errorTables > 0 ? 'text-danger' : 'text-muted'}">${errorTables}</div>
+                        <div class="text-muted small">Issues</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
         container.innerHTML = html;
     }
 
@@ -866,12 +1007,15 @@ class SuperadminDashboard {
     }
 
     showNotification(message, type = 'info') {
+        // Sanitize message
+        const safeMessage = this.sanitizeHTML(message);
+        
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;';
         notification.innerHTML = `
-            ${message}
+            ${safeMessage}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
 
@@ -883,6 +1027,46 @@ class SuperadminDashboard {
                 notification.remove();
             }
         }, 5000);
+    }
+
+    /**
+     * Sanitize HTML to prevent XSS
+     */
+    sanitizeHTML(str) {
+        if (str === null || str === undefined) {
+            return '';
+        }
+        
+        const temp = document.createElement('div');
+        temp.textContent = String(str);
+        return temp.innerHTML;
+    }
+
+    /**
+     * Safely get nested object property
+     */
+    safeGet(obj, path, defaultValue = null) {
+        try {
+            return path.split('.').reduce((acc, part) => acc && acc[part], obj) ?? defaultValue;
+        } catch (e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Format number with fallback
+     */
+    formatNumber(value, fallback = 'N/A') {
+        if (value === null || value === undefined || value === '') {
+            return fallback;
+        }
+        
+        const num = Number(value);
+        if (isNaN(num)) {
+            return fallback;
+        }
+        
+        return num.toLocaleString();
     }
 
     showPasswordModal(password) {

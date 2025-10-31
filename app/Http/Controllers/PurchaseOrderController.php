@@ -438,10 +438,13 @@ class PurchaseOrderController extends Controller
         if (!$po) abort(404);
         $items = DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->get();
         
-        // Get company logo for print view
-        $companyLogo = \App\Models\Setting::getCompanyLogo();
+        // Get branding data for print view
+        $brandingService = app(\App\Services\BrandingService::class);
+        $branding = $brandingService->getPrintData();
+        $companyLogo = $branding['company_logo'];
+        $companyName = $branding['company_name'];
         
-        return view('po.print', compact('po','items','auth','companyLogo'));
+        return view('po.print', compact('po','items','auth','companyLogo','companyName','branding'));
     }
 
     /** Lightweight PO JSON for modals (any logged-in role) */

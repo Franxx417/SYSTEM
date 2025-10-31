@@ -29,7 +29,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-traffic-light me-2"></i>Status Configuration</h5>
                 <div>
-                    <button class="btn btn-outline-primary btn-sm" onclick="addNewStatus()">
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
                         <i class="fas fa-plus"></i> Add Status
                     </button>
                 </div>
@@ -66,12 +66,12 @@
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary" 
-                                                onclick="editStatus('{{ $status->status_id }}', '{{ $status->status_name }}', '{{ addslashes($status->description ?? '') }}')">
+                                                onclick="openEditModal('{{ $status->status_id }}', '{{ $status->status_name }}', '{{ addslashes($status->description ?? '') }}')">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
                                         @if(($statusUsage[$status->status_name] ?? 0) == 0)
                                             <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteStatus('{{ $status->status_id }}', '{{ $status->status_name }}')">
+                                                    onclick="openDeleteModal('{{ $status->status_id }}', '{{ $status->status_name }}')">
                                                 <i class="fas fa-trash"></i> Delete
                                             </button>
                                         @endif
@@ -136,15 +136,294 @@
     </div>
 </div>
 
+{{-- Add Status Modal --}}
+<div class="modal fade" id="addStatusModal" tabindex="-1" aria-labelledby="addStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addStatusModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addStatusForm" onsubmit="handleAddStatus(event)">
+                <div class="modal-body">
+                    <div class="alert alert-info d-flex align-items-start">
+                        <i class="fas fa-info-circle me-2 mt-1"></i>
+                        <div>
+                            <strong>Create a new status</strong><br>
+                            <small>Define a status name and optional description for purchase order tracking.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_status_name" class="form-label">
+                            Status Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="add_status_name" 
+                               name="status_name" 
+                               required 
+                               maxlength="100"
+                               placeholder="e.g., Pending, Approved, Verified"
+                               autocomplete="off">
+                        <div class="form-text">Enter a clear, descriptive status name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_description" class="form-label">
+                            Description <span class="text-muted">(Optional)</span>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="add_description" 
+                                  name="description" 
+                                  rows="3" 
+                                  maxlength="500"
+                                  placeholder="Provide additional details about this status..."
+                                  style="min-height: 80px; max-height: 200px;"></textarea>
+                        <div class="form-text">Explain when this status should be used</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Create Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Edit Status Modal --}}
+<div class="modal fade" id="editStatusModal" tabindex="-1" aria-labelledby="editStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editStatusModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editStatusForm" onsubmit="handleEditStatus(event)">
+                <input type="hidden" id="edit_status_id" name="status_id">
+                <div class="modal-body">
+                    <div class="alert alert-warning d-flex align-items-start">
+                        <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                        <div>
+                            <strong>Editing existing status</strong><br>
+                            <small>Changes will affect all purchase orders using this status.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_status_name" class="form-label">
+                            Status Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="edit_status_name" 
+                               name="status_name" 
+                               required 
+                               maxlength="100"
+                               autocomplete="off">
+                        <div class="form-text">Update the status name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">
+                            Description <span class="text-muted">(Optional)</span>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="edit_description" 
+                                  name="description" 
+                                  rows="3" 
+                                  maxlength="500"
+                                  style="min-height: 80px; max-height: 200px;"></textarea>
+                        <div class="form-text">Update the status description</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Delete Status Modal --}}
+<div class="modal fade" id="deleteStatusModal" tabindex="-1" aria-labelledby="deleteStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteStatusModalLabel">
+                    <i class="fas fa-trash-alt me-2"></i>Delete Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deleteStatusForm" onsubmit="handleDeleteStatus(event)">
+                <input type="hidden" id="delete_status_id" name="status_id">
+                <div class="modal-body">
+                    <div class="alert alert-danger d-flex align-items-start mb-3">
+                        <i class="fas fa-exclamation-circle me-2 mt-1 fs-4"></i>
+                        <div>
+                            <strong>Warning: This action cannot be undone!</strong><br>
+                            <small>Deleting this status will permanently remove it from the system.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-light p-3 rounded border border-danger">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-traffic-light text-danger me-2 fs-5"></i>
+                            <div>
+                                <div class="text-muted small">Status to be deleted:</div>
+                                <div class="fw-bold fs-5" id="delete_status_name"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <p class="mb-2"><strong>Are you sure you want to delete this status?</strong></p>
+                        <ul class="small text-muted mb-0">
+                            <li>This status will be removed from the system</li>
+                            <li>This action is permanent and cannot be reversed</li>
+                            <li>Only unused statuses can be deleted</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function addNewStatus() {
-    const statusName = prompt('Enter new status name:');
-    if (!statusName || !statusName.trim()) {
+// Open Edit Modal
+function openEditModal(statusId, statusName, description) {
+    document.getElementById('edit_status_id').value = statusId;
+    document.getElementById('edit_status_name').value = statusName;
+    document.getElementById('edit_description').value = description || '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('editStatusModal'));
+    modal.show();
+}
+
+// Open Delete Modal
+function openDeleteModal(statusId, statusName) {
+    document.getElementById('delete_status_id').value = statusId;
+    document.getElementById('delete_status_name').textContent = statusName;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteStatusModal'));
+    modal.show();
+}
+
+// Real-time validation for status name
+function validateStatusName(input) {
+    const value = input.value.trim();
+    const feedback = input.parentElement.querySelector('.invalid-feedback') || createFeedbackElement(input);
+    
+    if (!value) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        feedback.textContent = 'Status name is required';
+        return false;
+    } else if (value.length < 2) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        feedback.textContent = 'Status name must be at least 2 characters';
+        return false;
+    } else if (value.length > 100) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        feedback.textContent = 'Status name must not exceed 100 characters';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        return true;
+    }
+}
+
+function createFeedbackElement(input) {
+    const feedback = document.createElement('div');
+    feedback.className = 'invalid-feedback';
+    input.parentElement.appendChild(feedback);
+    return feedback;
+}
+
+// Add real-time validation listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const statusNameInputs = ['add_status_name', 'edit_status_name'];
+    statusNameInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('blur', () => validateStatusName(input));
+            input.addEventListener('input', () => {
+                if (input.classList.contains('is-invalid')) {
+                    validateStatusName(input);
+                }
+            });
+        }
+    });
+    
+    // Reset form validation when modals are closed
+    ['addStatusModal', 'editStatusModal'].forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                const form = modal.querySelector('form');
+                if (form) {
+                    form.reset();
+                    form.querySelectorAll('.is-invalid, .is-valid').forEach(el => {
+                        el.classList.remove('is-invalid', 'is-valid');
+                    });
+                }
+            });
+        }
+    });
+});
+
+// Handle Add Status Form Submission
+function handleAddStatus(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    const statusNameInput = document.getElementById('add_status_name');
+    
+    // Validate before submission
+    if (!validateStatusName(statusNameInput)) {
+        statusNameInput.focus();
         return;
     }
     
-    const description = prompt('Enter description (optional):', '');
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
     
+    const formData = new FormData(form);
+    const data = {
+        status_name: formData.get('status_name').trim(),
+        description: formData.get('description').trim() || ''
+    };
+    
+function addNewStatus() {
     fetch('/status', {
         method: 'POST',
         headers: {
@@ -153,10 +432,7 @@ function addNewStatus() {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         },
-        body: JSON.stringify({
-            status_name: statusName.trim(),
-            description: description || ''
-        })
+        body: JSON.stringify(data)
     })
     .then(response => {
         if (!response.ok) {
@@ -167,6 +443,7 @@ function addNewStatus() {
     .then(data => {
         if (data.success) {
             showQuickNotification('Status created successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addStatusModal')).hide();
             setTimeout(() => location.reload(), 1500);
         } else {
             throw new Error(data.error || 'Failed to create status');
@@ -175,17 +452,45 @@ function addNewStatus() {
     .catch(error => {
         console.error('[Status] Error creating status:', error);
         showQuickNotification('Error: ' + error.message, 'error');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     });
 }
 
-function editStatus(statusId, statusName, description) {
-    const newName = prompt('Enter new status name:', statusName);
-    if (!newName || !newName.trim()) {
+// Handle Edit Status Form Submission
+function handleEditStatus(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    const statusNameInput = document.getElementById('edit_status_name');
+    
+    // Validate before submission
+    if (!validateStatusName(statusNameInput)) {
+        statusNameInput.focus();
         return;
     }
     
-    const newDescription = prompt('Enter new description:', description);
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
     
+    const formData = new FormData(form);
+    const statusId = formData.get('status_id');
+    const data = {
+        _method: 'PUT',
+        status_name: formData.get('status_name').trim(),
+        description: formData.get('description').trim() || ''
+    };
+    
+    editStatus(statusId, data, submitBtn, originalBtnText);
+}
+
+function editStatus(statusId, data, submitBtn, originalBtnText) {
+
     fetch(`/status/${statusId}`, {
         method: 'POST',
         headers: {
@@ -194,11 +499,7 @@ function editStatus(statusId, statusName, description) {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         },
-        body: JSON.stringify({
-            _method: 'PUT',
-            status_name: newName.trim(),
-            description: newDescription || ''
-        })
+        body: JSON.stringify(data)
     })
     .then(response => {
         if (!response.ok) {
@@ -209,6 +510,7 @@ function editStatus(statusId, statusName, description) {
     .then(data => {
         if (data.success) {
             showQuickNotification('Status updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editStatusModal')).hide();
             setTimeout(() => location.reload(), 1500);
         } else {
             throw new Error(data.error || 'Failed to update status');
@@ -217,14 +519,34 @@ function editStatus(statusId, statusName, description) {
     .catch(error => {
         console.error('[Status] Error updating status:', error);
         showQuickNotification('Error: ' + error.message, 'error');
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
     });
 }
 
-function deleteStatus(statusId, statusName) {
-    if (!confirm(`Are you sure you want to delete the status "${statusName}"?`)) {
-        return;
-    }
+// Handle Delete Status Form Submission
+function handleDeleteStatus(event) {
+    event.preventDefault();
     
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+    
+    const statusId = document.getElementById('delete_status_id').value;
+    
+    deleteStatus(statusId, submitBtn, originalBtnText);
+}
+
+function deleteStatus(statusId, submitBtn, originalBtnText) {
+
     fetch(`/status/${statusId}`, {
         method: 'POST',
         headers: {
@@ -246,6 +568,7 @@ function deleteStatus(statusId, statusName) {
     .then(data => {
         if (data.success) {
             showQuickNotification('Status deleted successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('deleteStatusModal')).hide();
             setTimeout(() => location.reload(), 1500);
         } else {
             throw new Error(data.error || 'Failed to delete status');
@@ -254,6 +577,12 @@ function deleteStatus(statusId, statusName) {
     .catch(error => {
         console.error('[Status] Error deleting status:', error);
         showQuickNotification('Error: ' + error.message, 'error');
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
     });
 }
 

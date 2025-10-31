@@ -250,31 +250,6 @@
                     </div>
                 </div>
 
-                <div class="card border-0 shadow-sm mt-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Account Security</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="fw-semibold">Two-Factor Authentication</div>
-                                    <small class="text-muted">Add an extra layer of security to your account</small>
-                                </div>
-                                <span class="badge bg-secondary">Coming Soon</span>
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="fw-semibold">Active Sessions</div>
-                                    <small class="text-muted">Current: Web Browser • Last login: {{ now()->format('M d, Y') }}</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm">
@@ -308,33 +283,33 @@
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label class="form-label">Language</label>
-                                    <select class="form-select">
-                                        <option selected>English (US)</option>
-                                        <option>Filipino</option>
-                                        <option>中文 (Chinese)</option>
+                                    <select class="form-select" name="language">
+                                        <option value="en">English (US)</option>
+                                        <option value="fil">Filipino</option>
+                                        <option value="zh">中文 (Chinese)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Date Format</label>
-                                    <select class="form-select">
-                                        <option>MM/DD/YYYY</option>
-                                        <option selected>DD/MM/YYYY</option>
-                                        <option>YYYY-MM-DD</option>
+                                    <select class="form-select" name="date_format">
+                                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Time Format</label>
-                                    <select class="form-select">
-                                        <option selected>12-hour (AM/PM)</option>
-                                        <option>24-hour</option>
+                                    <select class="form-select" name="time_format">
+                                        <option value="12">12-hour (AM/PM)</option>
+                                        <option value="24">24-hour</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Timezone</label>
-                                    <select class="form-select">
-                                        <option selected>Asia/Manila (GMT+8)</option>
-                                        <option>Asia/Tokyo (GMT+9)</option>
-                                        <option>UTC (GMT+0)</option>
+                                    <select class="form-select" name="timezone">
+                                        <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
+                                        <option value="Asia/Tokyo">Asia/Tokyo (GMT+9)</option>
+                                        <option value="UTC">UTC (GMT+0)</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -608,18 +583,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Preferences form handling (client-side for now)
-document.getElementById('preferencesForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    alert('Preferences saved! (This is a demo - backend integration pending)');
-});
-
-// Notifications form handling (client-side for now)
-document.getElementById('notificationsForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    alert('Notification settings saved! (This is a demo - backend integration pending)');
-});
 </script>
+
+@vite(['resources/js/pages/settings.js'])
 
 <style>
 .nav-tabs {

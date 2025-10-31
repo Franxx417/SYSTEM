@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\Api\RequestorController;
+use App\Http\Controllers\Api\HealthCheckController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +16,24 @@ use App\Http\Controllers\SuperAdminController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
+// Health check endpoints (public)
+Route::get('/health', [HealthCheckController::class, 'index'])->name('health');
+Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
+
+// Requestor API routes
+Route::prefix('requestor')->name('api.requestor.')->middleware(['web', 'api.auth:requestor'])->group(function () {
+    // Dashboard metrics
+    Route::get('/metrics', [RequestorController::class, 'getMetrics'])->name('metrics');
+    Route::get('/statistics', [RequestorController::class, 'getStatistics'])->name('statistics');
+    
+    // Purchase Orders
+    Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
+        Route::get('/', [RequestorController::class, 'getPurchaseOrders'])->name('index');
+        Route::get('/recent', [RequestorController::class, 'getRecentPurchaseOrders'])->name('recent');
+        Route::get('/{poId}', [RequestorController::class, 'getPurchaseOrder'])->name('show');
+    });
+});
 
 // Superadmin API routes
 Route::prefix('superadmin')->name('api.superadmin.')->middleware('web')->group(function () {

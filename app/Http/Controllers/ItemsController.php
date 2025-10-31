@@ -76,8 +76,8 @@ class ItemsController extends Controller
         
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('items.item_name', 'like', "%{$search}%")
-                  ->orWhere('items.item_description', 'like', "%{$search}%");
+                $q->where('i.item_name', 'like', "%{$search}%")
+                  ->orWhere('i.item_description', 'like', "%{$search}%");
             });
         }
         

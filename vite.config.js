@@ -9,6 +9,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/components/custom.css',
                 'resources/css/pages/superadmin-dashboard.css',
+                'resources/css/pages/branding.css',
                 
                 // Core JS
                 'resources/js/app.js',
@@ -28,6 +29,7 @@ export default defineConfig({
                 // Page-specific JS
                 'resources/js/pages/po-create.js',
                 'resources/js/pages/po-edit.js',
+                'resources/js/pages/po-print-direct.js',
                 'resources/js/pages/po-edit-extras.js',
                 'resources/js/pages/po-index.js',
                 'resources/js/pages/po-print.js',
@@ -36,6 +38,8 @@ export default defineConfig({
                 'resources/js/pages/items-index.js',
                 'resources/js/pages/suppliers-index.js',
                 'resources/js/pages/admin-users-index.js',
+                'resources/js/pages/branding.js',
+                'resources/js/pages/settings.js',
                 
                 // Legacy files (to be refactored)
                 'resources/js/po-form.js',

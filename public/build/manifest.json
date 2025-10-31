@@ -8,15 +8,23 @@
     ]
   },
   "resources/css/components/custom.css": {
-    "file": "assets/custom-DzIlw-pe.css",
+    "file": "assets/custom-DnZzYUCJ.css",
     "src": "resources/css/components/custom.css",
     "isEntry": true,
     "names": [
       "custom.css"
     ]
   },
+  "resources/css/pages/branding.css": {
+    "file": "assets/branding-D6iWVrMZ.css",
+    "src": "resources/css/pages/branding.css",
+    "isEntry": true,
+    "names": [
+      "branding.css"
+    ]
+  },
   "resources/css/pages/superadmin-dashboard.css": {
-    "file": "assets/superadmin-dashboard-DygWxrX7.css",
+    "file": "assets/superadmin-dashboard-D0bgqvdB.css",
     "src": "resources/css/pages/superadmin-dashboard.css",
     "isEntry": true,
     "names": [
@@ -24,7 +32,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-CEBmkf5a.js",
+    "file": "assets/app-BVCykcgi.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -33,7 +41,7 @@
     ]
   },
   "resources/js/bootstrap.js": {
-    "file": "assets/bootstrap-CFryQBuY.js",
+    "file": "assets/bootstrap-CvgioS1y.js",
     "name": "bootstrap",
     "src": "resources/js/bootstrap.js",
     "isEntry": true
@@ -63,13 +71,13 @@
     "isEntry": true
   },
   "resources/js/dashboards/superadmin-dashboard-enhanced.js": {
-    "file": "assets/superadmin-dashboard-enhanced-Dr91OaFR.js",
+    "file": "assets/superadmin-dashboard-enhanced-D0YWH79M.js",
     "name": "superadmin-dashboard-enhanced",
     "src": "resources/js/dashboards/superadmin-dashboard-enhanced.js",
     "isEntry": true
   },
   "resources/js/dashboards/superadmin-dashboard.js": {
-    "file": "assets/superadmin-dashboard-BaOhgRb4.js",
+    "file": "assets/superadmin-dashboard-Bz32FbYR.js",
     "name": "superadmin-dashboard",
     "src": "resources/js/dashboards/superadmin-dashboard.js",
     "isEntry": true
@@ -78,6 +86,12 @@
     "file": "assets/admin-users-index-DmEud93S.js",
     "name": "admin-users-index",
     "src": "resources/js/pages/admin-users-index.js",
+    "isEntry": true
+  },
+  "resources/js/pages/branding.js": {
+    "file": "assets/branding-DM5Yi0PT.js",
+    "name": "branding",
+    "src": "resources/js/pages/branding.js",
     "isEntry": true
   },
   "resources/js/pages/items-create.js": {
@@ -117,9 +131,18 @@
     "isEntry": true
   },
   "resources/js/pages/po-index.js": {
-    "file": "assets/po-index-A7k_FaF5.js",
+    "file": "assets/po-index-ZzCXDQcz.js",
     "name": "po-index",
     "src": "resources/js/pages/po-index.js",
+    "isEntry": true,
+    "imports": [
+      "resources/js/pages/po-print-direct.js"
+    ]
+  },
+  "resources/js/pages/po-print-direct.js": {
+    "file": "assets/po-print-direct-CuFG6l5q.js",
+    "name": "po-print-direct",
+    "src": "resources/js/pages/po-print-direct.js",
     "isEntry": true
   },
   "resources/js/pages/po-print.js": {
@@ -144,12 +167,6 @@
     "file": "assets/status-color-sync-DcoSHV44.js",
     "name": "status-color-sync",
     "src": "resources/js/status-color-sync.js",
-    "isEntry": true
-  },
-  "resources/js/system-status.js": {
-    "file": "assets/system-status-DeSEZYYK.js",
-    "name": "system-status",
-    "src": "resources/js/system-status.js",
     "isEntry": true
   }
 }

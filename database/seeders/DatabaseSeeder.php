@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             SuppliersSeeder::class,
             PurchaseOrdersSeeder::class,
             SettingsSeeder::class,
+            ConstantsSeeder::class,
             // Enhanced seeders for testing with large datasets
             // EnhancedSuppliersSeeder::class,
             // EnhancedUsersSeeder::class,
