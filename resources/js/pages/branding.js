@@ -343,6 +343,124 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Theme Mode
+    const themeMode = document.getElementById('theme_mode');
+    if (themeMode) {
+        themeMode.addEventListener('change', function() {
+            applyThemeMode(this.value);
+            markAsChanged();
+        });
+    }
+
+    function applyThemeMode(mode) {
+        const html = document.documentElement;
+        if (mode === 'dark') {
+            html.setAttribute('data-bs-theme', 'dark');
+        } else if (mode === 'light') {
+            html.removeAttribute('data-bs-theme');
+        } else if (mode === 'auto') {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                html.setAttribute('data-bs-theme', 'dark');
+            } else {
+                html.removeAttribute('data-bs-theme');
+            }
+        }
+    }
+
+    // Sidebar Position
+    const sidebarPosition = document.getElementById('sidebar_position');
+    if (sidebarPosition) {
+        sidebarPosition.addEventListener('change', function() {
+            applySidebarPosition(this.value);
+            markAsChanged();
+        });
+    }
+
+    function applySidebarPosition(position) {
+        const body = document.body;
+        body.setAttribute('data-sidebar-position', position);
+    }
+
+    // Button Styling
+    const buttonRadius = document.getElementById('button_radius');
+    const buttonRadiusValue = document.getElementById('button_radius_value');
+    if (buttonRadius && buttonRadiusValue) {
+        buttonRadius.addEventListener('input', function() {
+            const radius = this.value + 'px';
+            buttonRadiusValue.textContent = radius;
+            applyButtonStyling();
+            markAsChanged();
+        });
+    }
+
+    const buttonPadding = document.getElementById('button_padding');
+    const buttonPaddingValue = document.getElementById('button_padding_value');
+    if (buttonPadding && buttonPaddingValue) {
+        buttonPadding.addEventListener('input', function() {
+            const padding = this.value + 'px';
+            buttonPaddingValue.textContent = padding;
+            applyButtonStyling();
+            markAsChanged();
+        });
+    }
+
+    const buttonShadow = document.getElementById('button_shadow');
+    if (buttonShadow) {
+        buttonShadow.addEventListener('change', function() {
+            applyButtonStyling();
+            markAsChanged();
+        });
+    }
+
+    function applyButtonStyling() {
+        const radius = buttonRadius ? buttonRadius.value : 4;
+        const padding = buttonPadding ? buttonPadding.value : 8;
+        const shadow = buttonShadow ? buttonShadow.value : 'sm';
+
+        const previewButtons = [previewBtnPrimary, previewBtnSecondary, previewBtnAccent];
+        previewButtons.forEach(btn => {
+            if (btn) {
+                btn.style.borderRadius = radius + 'px';
+                btn.style.padding = padding + 'px ' + (padding * 1.5) + 'px';
+                
+                if (shadow === 'none') {
+                    btn.style.boxShadow = 'none';
+                } else if (shadow === 'sm') {
+                    btn.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                } else if (shadow === 'md') {
+                    btn.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                } else if (shadow === 'lg') {
+                    btn.style.boxShadow = '0 10px 15px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+    }
+
+    // Custom CSS
+    const customCss = document.getElementById('custom_css');
+    const cssCount = document.getElementById('css_count');
+    if (customCss && cssCount) {
+        const updateCssCount = () => {
+            cssCount.textContent = customCss.value.length;
+        };
+        customCss.addEventListener('input', function() {
+            updateCssCount();
+            applyCustomCss(this.value);
+            markAsChanged();
+        });
+        updateCssCount();
+    }
+
+    function applyCustomCss(cssContent) {
+        let styleElement = document.getElementById('custom-branding-css');
+        if (!styleElement) {
+            styleElement = document.createElement('style');
+            styleElement.id = 'custom-branding-css';
+            document.head.appendChild(styleElement);
+        }
+        styleElement.textContent = cssContent;
+    }
+
     function loadGoogleFont(fontName) {
         const linkId = 'google-font-' + fontName.replace(/\s+/g, '-');
         if (!document.getElementById(linkId)) {
@@ -369,24 +487,143 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form Submission
+    // Form Submission via API
     const saveBtn = document.getElementById('save-btn');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validate inputs
+        if (!validateForm()) {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Branding';
+            }
+            return;
+        }
+
         // Show loading state
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
         }
 
-        // Validate inputs
-        if (!validateForm()) {
-            e.preventDefault();
+        try {
+            // Create FormData for file upload support
+            const formData = new FormData(form);
+            
+            // Make API request
+            const response = await makeApiRequest('/api/superadmin/branding/update', 'POST', formData);
+            
+            if (response.success) {
+                // Show success message
+                showSuccessNotification('Branding updated successfully!');
+                
+                // Clear unsaved changes badge
+                hasUnsavedChanges = false;
+                if (unsavedBadge) {
+                    unsavedBadge.style.display = 'none';
+                }
+                
+                // Reload page after 1 second to reflect changes
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showErrorNotification(response.error || 'Failed to update branding');
+            }
+        } catch (error) {
+            console.error('Branding update failed:', error);
+            const serverMsg = error && error.responseData && (error.responseData.error || error.responseData.message) ?
+                error.responseData.error || error.responseData.message : null;
+            showErrorNotification('Failed to update branding: ' + (serverMsg || error.message || 'Unknown error'));
+            if (error && error.responseData && error.responseData.errors) {
+                const firstKey = Object.keys(error.responseData.errors)[0];
+                const firstErr = error.responseData.errors[firstKey][0];
+                showErrorNotification('Validation error: ' + firstErr);
+            }
+        } finally {
+            // Reset button state
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Branding';
             }
         }
     });
+
+    /**
+     * Make API request with proper error handling
+     */
+    async function makeApiRequest(url, method = 'GET', data = null) {
+        const options = {
+            method,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        };
+
+        if (data) {
+            if (data instanceof FormData) {
+                options.body = data;
+                // Don't set Content-Type for FormData - browser will set it with boundary
+            } else {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(data);
+            }
+        }
+
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const err = new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+            err.responseData = errorData;
+            err.status = response.status;
+            throw err;
+        }
+        
+        return await response.json();
+    }
+
+    /**
+     * Show success notification
+     */
+    function showSuccessNotification(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;';
+        alertDiv.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    /**
+     * Show error notification
+     */
+    function showErrorNotification(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 7000);
+    }
 
     function validateForm() {
         let isValid = true;
@@ -448,9 +685,27 @@ document.addEventListener('DOMContentLoaded', function() {
             previewLogoContainer.style.justifyContent = logoPosition.value === 'center' ? 'center' : 
                                                          logoPosition.value === 'right' ? 'flex-end' : 'flex-start';
         }
+        
+        // Initialize theme mode
+        if (themeMode) {
+            applyThemeMode(themeMode.value);
+        }
+        
+        // Initialize sidebar position
+        if (sidebarPosition) {
+            applySidebarPosition(sidebarPosition.value);
+        }
+        
+        // Initialize button styling
+        applyButtonStyling();
+        
+        // Initialize custom CSS
+        if (customCss && customCss.value) {
+            applyCustomCss(customCss.value);
+        }
     }
 
     initializePreview();
 
-    console.log('Branding tab initialized with real-time preview');
+    console.log('Branding tab initialized with real-time preview and advanced customization');
 });

@@ -71,7 +71,7 @@
     "isEntry": true
   },
   "resources/js/dashboards/superadmin-dashboard-enhanced.js": {
-    "file": "assets/superadmin-dashboard-enhanced-D0YWH79M.js",
+    "file": "assets/superadmin-dashboard-enhanced-CdIEwJPl.js",
     "name": "superadmin-dashboard-enhanced",
     "src": "resources/js/dashboards/superadmin-dashboard-enhanced.js",
     "isEntry": true
@@ -131,7 +131,7 @@
     "isEntry": true
   },
   "resources/js/pages/po-index.js": {
-    "file": "assets/po-index-ZzCXDQcz.js",
+    "file": "assets/po-index-D9cWoCwJ.js",
     "name": "po-index",
     "src": "resources/js/pages/po-index.js",
     "isEntry": true,
@@ -149,6 +149,12 @@
     "file": "assets/po-print-D-nbQjmd.js",
     "name": "po-print",
     "src": "resources/js/pages/po-print.js",
+    "isEntry": true
+  },
+  "resources/js/pages/settings.js": {
+    "file": "assets/settings-DGngK_Dx.js",
+    "name": "settings",
+    "src": "resources/js/pages/settings.js",
     "isEntry": true
   },
   "resources/js/pages/suppliers-index.js": {

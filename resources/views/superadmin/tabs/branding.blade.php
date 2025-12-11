@@ -313,6 +313,111 @@
                         </div>
                     </div>
 
+                    <hr>
+
+                    {{-- Theme & Layout Section --}}
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-paint-brush me-2"></i>Theme & Layout
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="theme_mode" class="form-label">Theme Mode</label>
+                                <select class="form-select" id="theme_mode" name="theme_mode" aria-label="Theme mode selection">
+                                    <option value="light" {{ ($settings['branding.theme_mode'] ?? 'light') === 'light' ? 'selected' : '' }}>Light</option>
+                                    <option value="dark" {{ ($settings['branding.theme_mode'] ?? 'light') === 'dark' ? 'selected' : '' }}>Dark</option>
+                                    <option value="auto" {{ ($settings['branding.theme_mode'] ?? 'light') === 'auto' ? 'selected' : '' }}>Auto (System)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="sidebar_position" class="form-label">Sidebar Position</label>
+                                <select class="form-select" id="sidebar_position" name="sidebar_position" aria-label="Sidebar position">
+                                    <option value="left" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'left' ? 'selected' : '' }}>Left</option>
+                                    <option value="right" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'right' ? 'selected' : '' }}>Right</option>
+                                    <option value="top" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'top' ? 'selected' : '' }}>Top (Horizontal)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    {{-- Button Styling Section --}}
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-square me-2"></i>Button Styling
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="button_radius" class="form-label">Border Radius</label>
+                                <div class="input-group">
+                                    <input 
+                                        type="range" 
+                                        class="form-range" 
+                                        id="button_radius" 
+                                        name="button_radius" 
+                                        min="0" 
+                                        max="20" 
+                                        step="1"
+                                        value="{{ $settings['branding.button_radius'] ?? 4 }}"
+                                        aria-label="Button border radius"
+                                    />
+                                    <span class="input-group-text" id="button_radius_value">{{ $settings['branding.button_radius'] ?? 4 }}px</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="button_padding" class="form-label">Padding</label>
+                                <div class="input-group">
+                                    <input 
+                                        type="range" 
+                                        class="form-range" 
+                                        id="button_padding" 
+                                        name="button_padding" 
+                                        min="4" 
+                                        max="16" 
+                                        step="1"
+                                        value="{{ $settings['branding.button_padding'] ?? 8 }}"
+                                        aria-label="Button padding"
+                                    />
+                                    <span class="input-group-text" id="button_padding_value">{{ $settings['branding.button_padding'] ?? 8 }}px</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="button_shadow" class="form-label">Shadow</label>
+                                <select class="form-select" id="button_shadow" name="button_shadow" aria-label="Button shadow">
+                                    <option value="none" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'none' ? 'selected' : '' }}>None</option>
+                                    <option value="sm" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'sm' ? 'selected' : '' }}>Small</option>
+                                    <option value="md" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'md' ? 'selected' : '' }}>Medium</option>
+                                    <option value="lg" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'lg' ? 'selected' : '' }}>Large</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    {{-- Custom CSS Section --}}
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-code me-2"></i>Custom CSS
+                        </h6>
+                        <div class="mb-3">
+                            <label for="custom_css" class="form-label">Custom CSS Rules</label>
+                            <textarea 
+                                class="form-control font-monospace" 
+                                id="custom_css" 
+                                name="custom_css" 
+                                rows="8"
+                                maxlength="5000"
+                                placeholder="/* Add custom CSS rules here */&#10;.custom-class {&#10;  color: #333;&#10;}"
+                                aria-describedby="custom_css_help"
+                            >{{ old('custom_css', $settings['branding.custom_css'] ?? '') }}</textarea>
+                            <div id="custom_css_help" class="form-text">
+                                Advanced CSS customization. Max 5000 characters. <span id="css_count">0</span>/5000
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Action Buttons --}}
                     <div class="d-flex gap-2 justify-content-end border-top pt-3">
                         <button 

@@ -472,3 +472,147 @@
 #preview-container::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+/* Theme & Layout Styles */
+#theme_mode,
+#sidebar_position,
+#button_shadow {
+    transition: all 0.3s ease;
+}
+
+/* Custom CSS Textarea */
+#custom_css {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #333;
+    resize: vertical;
+}
+
+#custom_css:focus {
+    background-color: #fff;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#custom_css::placeholder {
+    color: #adb5bd;
+    opacity: 0.7;
+}
+
+/* CSS Character Counter */
+#css_count {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+/* Theme Indicator */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #212529;
+    --bs-body-color: #f8f9fa;
+}
+
+/* Sidebar Position Indicator */
+[data-sidebar-position="right"] {
+    direction: rtl;
+}
+
+[data-sidebar-position="top"] {
+    --sidebar-position: top;
+}
+
+/* Button Styling Preview Enhancements */
+#preview-btn-primary:focus,
+#preview-btn-secondary:focus,
+#preview-btn-accent:focus {
+    outline: 2px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+}
+
+/* Export/Import Buttons (Future Enhancement) */
+.btn-export,
+.btn-import {
+    transition: all 0.3s ease;
+}
+
+.btn-export:hover,
+.btn-import:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Settings Group */
+.settings-group {
+    border-left: 3px solid #0d6efd;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.settings-group h6 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* Live Preview Enhancements */
+.preview-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-height: 300px;
+}
+
+[data-bs-theme="dark"] .preview-container {
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .preview-container {
+        margin-top: 2rem;
+        min-height: 250px;
+    }
+    
+    #custom_css {
+        font-size: 0.75rem;
+    }
+}
+
+/* Animation for Settings Changes */
+@keyframes settingChange {
+    0% {
+        background-color: #fff3cd;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.setting-changed {
+    animation: settingChange 0.5s ease-out;
+}
+
+/* Accessibility Enhancements for New Features */
+#theme_mode:focus,
+#sidebar_position:focus,
+#button_radius:focus,
+#button_padding:focus,
+#button_shadow:focus,
+#custom_css:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* Dark Mode Support for Form Elements */
+@media (prefers-color-scheme: dark) {
+    #custom_css {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border-color: #4a5568;
+    }
+    
+    #custom_css::placeholder {
+        color: #a0aec0;
+    }
+}

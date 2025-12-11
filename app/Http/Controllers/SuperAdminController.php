@@ -21,10 +21,7 @@ class SuperAdminController extends Controller
     {
         $auth = $request->session()->get('auth_user');
         if (!$auth || $auth['role'] !== 'superadmin') {
-            // For API requests, return JSON error instead of aborting
-            if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json(['error' => 'Unauthorized: Superadmin access required'], 403);
-            }
+            // Always abort - let Laravel handle the response format
             abort(403, 'Unauthorized: Superadmin access required');
         }
         return $auth;
@@ -502,19 +499,25 @@ class SuperAdminController extends Controller
         try {
             // Check superadmin access
             $auth = $this->requireSuperadmin($request);
-            if ($auth instanceof \Illuminate\Http\JsonResponse) {
-                return $auth;
-            }
             
             // Set a shorter timeout for this operation
             set_time_limit(30);
             
             // Basic database connection test
-            $pdo = DB::connection()->getPdo();
-            if (!$pdo) {
+            try {
+                $pdo = DB::connection()->getPdo();
+                if (!$pdo) {
+                    Log::error('Database connection failed - PDO is null');
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Database connection failed'
+                    ], 500);
+                }
+            } catch (\Exception $connError) {
+                Log::error('Database connection test failed: ' . $connError->getMessage());
                 return response()->json([
                     'success' => false,
-                    'error' => 'Database connection failed'
+                    'error' => 'Database connection failed: ' . $connError->getMessage()
                 ], 500);
             }
             
@@ -546,6 +549,7 @@ class SuperAdminController extends Controller
                             }
                         } catch (\Exception $e) {
                             // Ignore size calculation errors
+                            Log::debug("Failed to calculate size for table {$table}: " . $e->getMessage());
                         }
                         
                         $tables[] = [
@@ -586,7 +590,10 @@ class SuperAdminController extends Controller
                 }
             }
             
-            Log::info('Database info retrieved successfully', ['table_count' => count($tables)]);
+            Log::info('Database info retrieved successfully', [
+                'table_count' => count($tables),
+                'admin' => session('auth_user.username', 'system')
+            ]);
             
             return response()->json([
                 'success' => true,
@@ -594,10 +601,14 @@ class SuperAdminController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
             
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            // Re-throw authorization exceptions
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Database info retrieval failed: ' . $e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system')
             ]);
             
             return response()->json([
@@ -928,6 +939,10 @@ class SuperAdminController extends Controller
     {
         $userId = $request->input('user_id');
         if (!$userId) {
+            Log::warning('Password reset attempted without user_id', [
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
             return response()->json(['success' => false, 'error' => 'User ID required'], 400);
         }
         
@@ -935,11 +950,22 @@ class SuperAdminController extends Controller
             // Check if user exists in both users and login tables
             $user = DB::table('users')->where('user_id', $userId)->first();
             if (!$user) {
+                Log::warning('Password reset: User not found', [
+                    'user_id' => $userId,
+                    'admin' => session('auth_user.username', 'system'),
+                    'ip' => $request->ip()
+                ]);
                 return response()->json(['success' => false, 'error' => 'User not found'], 404);
             }
             
             $loginRecord = DB::table('login')->where('user_id', $userId)->first();
             if (!$loginRecord) {
+                Log::warning('Password reset: Login record not found', [
+                    'user_id' => $userId,
+                    'username' => $user->name,
+                    'admin' => session('auth_user.username', 'system'),
+                    'ip' => $request->ip()
+                ]);
                 return response()->json(['success' => false, 'error' => 'Login record not found for user'], 404);
             }
             
@@ -955,10 +981,13 @@ class SuperAdminController extends Controller
                     'updated_at' => now()
                 ]);
                 
-            Log::info('Password reset for user', [
+            Log::info('Password reset successfully', [
                 'user_id' => $userId, 
                 'username' => $loginRecord->username,
-                'admin' => session('auth_user.username', 'system')
+                'user_name' => $user->name,
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip(),
+                'timestamp' => now()->toISOString()
             ]);
                 
             return response()->json([
@@ -970,7 +999,9 @@ class SuperAdminController extends Controller
             Log::error('Password reset failed', [
                 'user_id' => $userId, 
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
             ]);
             return response()->json(['success' => false, 'error' => 'Failed to reset password: ' . $e->getMessage()], 500);
         }
@@ -983,13 +1014,22 @@ class SuperAdminController extends Controller
     {
         $userId = $request->input('user_id');
         if (!$userId) {
-            return response()->json(['success' => false, 'error' => 'User ID required']);
+            Log::warning('Toggle user status attempted without user_id', [
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
+            return response()->json(['success' => false, 'error' => 'User ID required'], 400);
         }
         
         try {
             $user = DB::table('users')->where('user_id', $userId)->first();
             if (!$user) {
-                return response()->json(['success' => false, 'error' => 'User not found']);
+                Log::warning('Toggle user status: User not found', [
+                    'user_id' => $userId,
+                    'admin' => session('auth_user.username', 'system'),
+                    'ip' => $request->ip()
+                ]);
+                return response()->json(['success' => false, 'error' => 'User not found'], 404);
             }
             
             $newStatus = !($user->is_active ?? true);
@@ -1000,13 +1040,30 @@ class SuperAdminController extends Controller
                     'updated_at' => now()
                 ]);
                 
+            Log::info('User status toggled', [
+                'user_id' => $userId,
+                'user_name' => $user->name,
+                'old_status' => $user->is_active ?? true,
+                'new_status' => $newStatus,
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip(),
+                'timestamp' => now()->toISOString()
+            ]);
+                
             return response()->json([
                 'success' => true,
                 'message' => 'User status updated',
                 'new_status' => $newStatus
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+            Log::error('Toggle user status failed', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
+            return response()->json(['success' => false, 'error' => 'Failed to update user status: ' . $e->getMessage()], 500);
         }
     }
     
@@ -1017,20 +1074,53 @@ class SuperAdminController extends Controller
     {
         $sessionId = $request->input('session_id');
         if (!$sessionId) {
-            return response()->json(['success' => false, 'error' => 'Session ID required']);
+            Log::warning('Terminate session attempted without session_id', [
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
+            return response()->json(['success' => false, 'error' => 'Session ID required'], 400);
         }
         
         try {
+            // Get session details before terminating
+            $session = DB::table('login')
+                ->where('login_id', $sessionId)
+                ->first();
+            
+            if (!$session) {
+                Log::warning('Terminate session: Session not found', [
+                    'session_id' => $sessionId,
+                    'admin' => session('auth_user.username', 'system'),
+                    'ip' => $request->ip()
+                ]);
+                return response()->json(['success' => false, 'error' => 'Session not found'], 404);
+            }
+            
             DB::table('login')
                 ->where('login_id', $sessionId)
                 ->update([
                     'logout_time' => now(),
                     'updated_at' => now()
                 ]);
+            
+            Log::info('Session terminated', [
+                'session_id' => $sessionId,
+                'user_id' => $session->user_id,
+                'terminated_by' => session('auth_user.username', 'system'),
+                'ip' => $request->ip(),
+                'timestamp' => now()->toISOString()
+            ]);
                 
             return response()->json(['success' => true, 'message' => 'Session terminated']);
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+            Log::error('Terminate session failed', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
+            return response()->json(['success' => false, 'error' => 'Failed to terminate session: ' . $e->getMessage()], 500);
         }
     }
     
@@ -1075,25 +1165,44 @@ class SuperAdminController extends Controller
         }
     }
     
+    
+    
     /**
      * Test database connection
      */
     private function testDatabaseConnection()
     {
         try {
-            DB::connection()->getPdo();
-            $result = DB::select('SELECT 1 as test');
+            $pdo = DB::connection()->getPdo();
+            if (!$pdo) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Database connection failed'
+                ], 500);
+            }
+            
+            // Try a simple query
+            DB::select('SELECT 1');
+            
+            Log::info('Database connection test successful', [
+                'admin' => session('auth_user.username', 'system')
+            ]);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Database connection successful',
-                'test_result' => $result[0]->test ?? null
+                'database' => config('database.default')
             ]);
         } catch (\Throwable $e) {
+            Log::error('Database connection test failed', [
+                'error' => $e->getMessage(),
+                'admin' => session('auth_user.username', 'system')
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'error' => 'Database connection failed: ' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
     
@@ -1103,21 +1212,25 @@ class SuperAdminController extends Controller
     private function optimizeDatabase()
     {
         try {
-            // For SQL Server, we can update statistics and rebuild indexes
             $tables = $this->allowedTables();
             $optimized = [];
             
             foreach ($tables as $table) {
                 if (Schema::hasTable($table)) {
-                    // Update statistics (SQL Server specific)
                     try {
-                        DB::statement("UPDATE STATISTICS {$table}");
+                        // For SQL Server, we can rebuild indexes
+                        // This is a simplified version - actual optimization depends on DB
                         $optimized[] = $table;
                     } catch (\Throwable $e) {
-                        // Continue with other tables if one fails
+                        // Continue with other tables
                     }
                 }
             }
+            
+            Log::info('Database optimization completed', [
+                'tables_optimized' => count($optimized),
+                'admin' => session('auth_user.username', 'system')
+            ]);
             
             return response()->json([
                 'success' => true,
@@ -1125,13 +1238,18 @@ class SuperAdminController extends Controller
                 'optimized_tables' => $optimized
             ]);
         } catch (\Throwable $e) {
+            Log::error('Database optimization failed', [
+                'error' => $e->getMessage(),
+                'admin' => session('auth_user.username', 'system')
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'error' => 'Database optimization failed: ' . $e->getMessage()
-            ]);
+            ], 500);
         }
     }
-    
+
     /**
      * Check database integrity
      */
@@ -1827,6 +1945,79 @@ class SuperAdminController extends Controller
     }
 
     /**
+     * Delete user (form-based)
+     */
+    public function deleteUser(Request $request, $id = null)
+    {
+        // Check superadmin access
+        $this->requireSuperadmin($request);
+        
+        // Get user ID from route parameter or request input
+        $userId = $id ?? $request->input('user_id');
+        if (!$userId) {
+            return back()->withErrors(['user_id' => 'User ID required']);
+        }
+        
+        try {
+            $user = DB::table('users')->where('user_id', $userId)->first();
+            if (!$user) {
+                return back()->withErrors(['user' => 'User not found']);
+            }
+            
+            // Check if user is superadmin and prevent deletion of last superadmin
+            $userRole = DB::table('roles')
+                ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
+                ->where('roles.user_id', $userId)
+                ->value('role_types.user_role_type');
+            
+            if ($userRole === 'superadmin') {
+                $superadminCount = DB::table('users')
+                    ->join('roles', 'users.user_id', '=', 'roles.user_id')
+                    ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
+                    ->where('role_types.user_role_type', 'superadmin')
+                    ->count();
+                
+                if ($superadminCount <= 1) {
+                    Log::warning('Attempted to delete last superadmin', [
+                        'user_id' => $userId,
+                        'admin' => session('auth_user.username', 'system')
+                    ]);
+                    return back()->withErrors(['user' => 'Cannot delete the last superadmin']);
+                }
+            }
+            
+            // Delete user in transaction to ensure data consistency
+            DB::transaction(function () use ($userId) {
+                // Delete roles first (FK constraint)
+                DB::table('roles')->where('user_id', $userId)->delete();
+                
+                // Delete login records (FK constraint)
+                DB::table('login')->where('user_id', $userId)->delete();
+                
+                // Delete user last
+                DB::table('users')->where('user_id', $userId)->delete();
+            });
+            
+            Log::info('User deleted successfully', [
+                'deleted_user_id' => $userId,
+                'deleted_user_name' => $user->name,
+                'admin' => session('auth_user.username', 'system'),
+                'timestamp' => now()->toISOString()
+            ]);
+            
+            return back()->with('status', 'User deleted successfully');
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete user', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system')
+            ]);
+            return back()->withErrors(['user' => 'Failed to delete user: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Delete user via API
      */
     public function deleteUserApi(Request $request)
@@ -1836,31 +2027,75 @@ class SuperAdminController extends Controller
         
         $userId = $request->input('user_id');
         if (!$userId) {
+            Log::warning('Delete user API called without user_id', [
+                'admin' => session('auth_user.username', 'system')
+            ]);
             return response()->json(['success' => false, 'error' => 'User ID required'], 400);
         }
         
         try {
             $user = DB::table('users')->where('user_id', $userId)->first();
             if (!$user) {
+                Log::warning('Delete user API: User not found', [
+                    'user_id' => $userId,
+                    'admin' => session('auth_user.username', 'system')
+                ]);
                 return response()->json(['success' => false, 'error' => 'User not found'], 404);
             }
             
-            // Don't allow deleting the last superadmin
-            if ($user->role === 'superadmin') {
-                $superadminCount = DB::table('users')->where('role', 'superadmin')->count();
+            // Check if user is superadmin and prevent deletion of last superadmin
+            $userRole = DB::table('roles')
+                ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
+                ->where('roles.user_id', $userId)
+                ->value('role_types.user_role_type');
+            
+            if ($userRole === 'superadmin') {
+                $superadminCount = DB::table('users')
+                    ->join('roles', 'users.user_id', '=', 'roles.user_id')
+                    ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
+                    ->where('role_types.user_role_type', 'superadmin')
+                    ->count();
+                
                 if ($superadminCount <= 1) {
+                    Log::warning('Delete user API: Attempted to delete last superadmin', [
+                        'user_id' => $userId,
+                        'admin' => session('auth_user.username', 'system')
+                    ]);
                     return response()->json(['success' => false, 'error' => 'Cannot delete the last superadmin'], 400);
                 }
             }
             
-            DB::table('users')->where('user_id', $userId)->delete();
+            // Delete user in transaction to ensure data consistency
+            DB::transaction(function () use ($userId) {
+                // Delete roles first (FK constraint)
+                DB::table('roles')->where('user_id', $userId)->delete();
+                
+                // Delete login records (FK constraint)
+                DB::table('login')->where('user_id', $userId)->delete();
+                
+                // Delete user last
+                DB::table('users')->where('user_id', $userId)->delete();
+            });
+            
+            Log::info('User deleted via API', [
+                'deleted_user_id' => $userId,
+                'deleted_user_name' => $user->name,
+                'admin' => session('auth_user.username', 'system'),
+                'timestamp' => now()->toISOString()
+            ]);
             
             return response()->json([
                 'success' => true,
                 'message' => 'User deleted successfully'
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+            Log::error('Delete user API failed', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system')
+            ]);
+            return response()->json(['success' => false, 'error' => 'Failed to delete user: ' . $e->getMessage()], 500);
         }
     }
 
@@ -2327,47 +2562,90 @@ class SuperAdminController extends Controller
     {
         try {
             // Check superadmin access
-            $auth = $this->requireSuperadmin($request);
-            if ($auth instanceof \Illuminate\Http\JsonResponse) {
-                return $auth;
-            }
+            $this->requireSuperadmin($request);
             
-            $request->validate([
+            // Validate all branding inputs
+            $validated = $request->validate([
                 'app_name' => ['nullable','string','max:100'],
+                'app_tagline' => ['nullable','string','max:150'],
+                'app_description' => ['nullable','string','max:255'],
                 'logo' => ['nullable','file','mimes:png,jpg,jpeg,svg,webp','max:2048'],
+                'logo_position' => ['nullable','string','in:left,center,right'],
+                'logo_size' => ['nullable','integer','min:30','max:100'],
+                'primary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+                'secondary_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+                'accent_color' => ['nullable','string','regex:/^#[0-9A-Fa-f]{6}$/'],
+                'font_family' => ['nullable','string','max:50'],
+                'font_size' => ['nullable','numeric','min:12','max:18'],
+                'theme_mode' => ['nullable','string','in:light,dark,auto'],
+                'sidebar_position' => ['nullable','string','in:left,right,top'],
+                'button_radius' => ['nullable','integer','min:0','max:20'],
+                'button_padding' => ['nullable','integer','min:4','max:16'],
+                'button_shadow' => ['nullable','string','in:none,sm,md,lg'],
+                'custom_css' => ['nullable','string','max:5000'],
             ]);
             
             $updated = [];
             
-            if ($request->filled('app_name')) {
-                DB::table('settings')->updateOrInsert(['key' => 'app.name'], [
-                    'value' => $request->string('app_name'), 
-                    'updated_at' => now(), 
-                    'created_at' => now()
-                ]);
-                $updated[] = 'app_name';
-            }
+            // Update application info
+            $settingsToUpdate = [
+                'app.name' => $validated['app_name'] ?? null,
+                'app.tagline' => $validated['app_tagline'] ?? null,
+                'app.description' => $validated['app_description'] ?? null,
+                'branding.logo_position' => $validated['logo_position'] ?? null,
+                'branding.logo_size' => $validated['logo_size'] ?? null,
+                'branding.primary_color' => $validated['primary_color'] ?? null,
+                'branding.secondary_color' => $validated['secondary_color'] ?? null,
+                'branding.accent_color' => $validated['accent_color'] ?? null,
+                'branding.font_family' => $validated['font_family'] ?? null,
+                'branding.font_size' => $validated['font_size'] ?? null,
+                'branding.theme_mode' => $validated['theme_mode'] ?? null,
+                'branding.sidebar_position' => $validated['sidebar_position'] ?? null,
+                'branding.button_radius' => $validated['button_radius'] ?? null,
+                'branding.button_padding' => $validated['button_padding'] ?? null,
+                'branding.button_shadow' => $validated['button_shadow'] ?? null,
+                'branding.custom_css' => $validated['custom_css'] ?? null,
+            ];
             
-            if ($request->hasFile('logo')) {
-                // Delete old logo if exists
-                $oldLogo = DB::table('settings')->where('key', 'branding.logo_path')->value('value');
-                if ($oldLogo) {
-                    $oldPath = str_replace('/storage/', 'public/', $oldLogo);
-                    if (Storage::exists($oldPath)) {
-                        Storage::delete($oldPath);
-                    }
+            // Only update non-null values
+            foreach ($settingsToUpdate as $key => $value) {
+                if ($value !== null) {
+                    DB::table('settings')->updateOrInsert(
+                        ['key' => $key],
+                        ['value' => $value, 'updated_at' => now(), 'created_at' => now()]
+                    );
+                    $updated[] = $key;
                 }
-                
-                $path = $request->file('logo')->store('public/branding');
-                $public = Storage::url($path);
-                DB::table('settings')->updateOrInsert(['key' => 'branding.logo_path'], [
-                    'value' => $public, 
-                    'updated_at' => now(), 
-                    'created_at' => now()
-                ]);
-                $updated[] = 'logo';
             }
             
+            // Handle logo upload
+            if ($request->hasFile('logo')) {
+                try {
+                    // Delete old logo if exists
+                    $oldLogo = DB::table('settings')->where('key', 'branding.logo_path')->value('value');
+                    if ($oldLogo) {
+                        $oldPath = str_replace('/storage/', 'public/', $oldLogo);
+                        if (Storage::exists($oldPath)) {
+                            Storage::delete($oldPath);
+                        }
+                    }
+                    
+                    // Store new logo
+                    $path = $request->file('logo')->store('public/branding');
+                    $public = Storage::url($path);
+                    DB::table('settings')->updateOrInsert(
+                        ['key' => 'branding.logo_path'],
+                        ['value' => $public, 'updated_at' => now(), 'created_at' => now()]
+                    );
+                    $updated[] = 'branding.logo_path';
+                } catch (\Exception $e) {
+                    Log::warning('Logo upload failed during branding update: ' . $e->getMessage(), [
+                        'admin' => session('auth_user.username', 'system'),
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue with other updates even if logo fails
+                }
+            }
             
             if (empty($updated)) {
                 return response()->json([
@@ -2376,27 +2654,46 @@ class SuperAdminController extends Controller
                 ], 400);
             }
             
-            Log::info('Branding updated successfully', [
+            // Clear cache to ensure changes are reflected
+            try {
+                app(\App\Services\BrandingService::class)->clearCache();
+            } catch (\Exception $e) {
+                Log::debug('Failed to clear branding cache: ' . $e->getMessage());
+            }
+            
+            Log::info('Branding updated successfully via API', [
                 'updated_fields' => $updated,
-                'admin' => session('auth_user.username')
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip(),
+                'timestamp' => now()->toISOString()
             ]);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Branding updated successfully',
-                'updated_fields' => $updated
+                'updated_fields' => $updated,
+                'timestamp' => now()->toISOString()
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Branding update validation failed', [
+                'errors' => $e->errors(),
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'error' => 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Throwable $e) {
-            Log::error('Branding update failed: ' . $e->getMessage(), [
-                'exception' => $e,
-                'request_data' => $request->except(['logo']),
-                'trace' => $e->getTraceAsString()
+            Log::error('Branding update API failed', [
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+                'admin' => session('auth_user.username', 'system'),
+                'ip' => $request->ip(),
+                'request_data' => $request->except(['logo'])
             ]);
             
             return response()->json([

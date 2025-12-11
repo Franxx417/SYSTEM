@@ -963,10 +963,19 @@ class SuperadminDashboard {
                 this.showNotification('Branding updated successfully', 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                this.showNotification(response.error || 'Failed to update branding', 'error');
+                const msg = response.error || 'Failed to update branding';
+                this.showNotification(msg, 'error');
             }
         } catch (error) {
-            this.showNotification('Failed to update branding', 'error');
+            const serverMsg = error && error.responseData && (error.responseData.error || (error.responseData.message)) ?
+                error.responseData.error || error.responseData.message : null;
+            const finalMsg = serverMsg ? `Failed to update branding: ${serverMsg}` : `Failed to update branding: ${error.message || 'Unknown error'}`;
+            this.showNotification(finalMsg, 'error');
+            if (error && error.responseData && error.responseData.errors) {
+                const firstKey = Object.keys(error.responseData.errors)[0];
+                const firstErr = error.responseData.errors[firstKey][0];
+                this.showNotification(`Validation error: ${firstErr}`, 'error');
+            }
         }
     }
 
@@ -993,11 +1002,18 @@ class SuperadminDashboard {
 
         try {
             const response = await fetch(url, options);
-            
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errorData = null;
+                try {
+                    errorData = await response.json();
+                } catch (_) { /* ignore non-JSON */ }
+                const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (errorData) err.responseData = errorData;
+                err.status = response.status;
+                throw err;
             }
-            
+
             const result = await response.json();
             return result;
         } catch (error) {

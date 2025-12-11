@@ -283,22 +283,29 @@ class PurchaseOrderController extends Controller
         
     }
 
-    /** Show PO details by human-readable PO number */
+    /** Show PO details by human-readable PO number (redirects to modal flow on index) */
     public function show(Request $request, string $poNo)
     {
         $auth = $this->requireRole($request, 'requestor');
+
         $po = DB::table('purchase_orders as po')
-            ->leftJoin('suppliers as s','s.supplier_id','=','po.supplier_id')
-            ->leftJoin('approvals as ap','ap.purchase_order_id','=','po.purchase_order_id')
-            ->leftJoin('statuses as st','st.status_id','=','ap.status_id')
+            ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
+            ->leftJoin('approvals as ap', 'ap.purchase_order_id', '=', 'po.purchase_order_id')
+            ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
             ->where('po.purchase_order_no', $poNo)
             ->where('po.requestor_id', $auth['user_id'])
             ->whereNotNull('st.status_name') // Only show POs with status
-            ->select('po.*','s.name as supplier_name','st.status_name','ap.remarks')
+            ->select('po.purchase_order_id')
             ->first();
-        if (!$po) abort(404);
-        $items = DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->get();
-        return view('po.show', compact('po','items','auth'));
+
+        if (!$po) {
+            abort(404);
+        }
+
+        // Redirect to the index page and trigger the existing modal-based show flow
+        return redirect()
+            ->route('po.index', ['open_po' => $poNo])
+            ->with('status', $request->session()->get('status'));
     }
 
     /** Edit PO basic fields */
@@ -614,7 +621,66 @@ class PurchaseOrderController extends Controller
             return back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * Get detailed information for a specific purchase order
+     */
+    public function getOrderDetails(Request $request, string $poNo)
+    {
+        try {
+            \Log::info('Fetching order details', ['po_no' => $poNo]);
+            
+            $auth = $request->session()->get('auth_user');
+            if (!$auth) {
+                \Log::warning('Unauthorized access attempt for order details', ['po_no' => $poNo]);
+                return response()->json(['success' => false, 'message' => 'Unauthorized - Please login'], 401);
+            }
+            
+            \Log::info('User authenticated', ['user_id' => $auth['user_id'], 'role' => $auth['role']]);
+
+            $po = DB::table('purchase_orders as po')
+                ->leftJoin('users as u', 'u.user_id', '=', 'po.requestor_id')
+                ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
+                ->leftJoin('approvals as ap', 'ap.purchase_order_id', '=', 'po.purchase_order_id')
+                ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
+                ->where('po.purchase_order_no', $poNo)
+                ->select(
+                    'po.*',
+                    DB::raw("ISNULL(u.name, '') as made_by"),
+                    's.name as supplier_name',
+                    'st.status_name',
+                    'ap.remarks'
+                )
+                ->first();
+
+            \Log::info('PO query result', ['po_found' => !is_null($po), 'po_data' => $po]);
+
+            if (!$po) {
+                \Log::warning('Purchase order not found', ['po_no' => $poNo]);
+                return response()->json(['success' => false, 'message' => 'Purchase order not found'], 404);
+            }
+
+            $items = DB::table('items')
+                ->where('purchase_order_id', $po->purchase_order_id)
+                ->select('item_name', 'item_description as description', 'quantity', 'unit_price', 'total_cost')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'order' => $po,
+                'items' => $items
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching order details', [
+                'po_no' => $poNo,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching order details: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
-
-
-

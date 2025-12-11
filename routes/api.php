@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\Api\RequestorController;
 use App\Http\Controllers\Api\HealthCheckController;
+use App\Http\Controllers\PurchaseOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +35,13 @@ Route::prefix('requestor')->name('api.requestor.')->middleware(['web', 'api.auth
         Route::get('/{poId}', [RequestorController::class, 'getPurchaseOrder'])->name('show');
     });
 });
+
+// Test route
+Route::get('/test', function() {
+    return response()->json(['success' => true, 'message' => 'API is working']);
+});
+
+// Note: Purchase order details route moved to web.php for session-based authentication
 
 // Superadmin API routes
 Route::prefix('superadmin')->name('api.superadmin.')->middleware('web')->group(function () {

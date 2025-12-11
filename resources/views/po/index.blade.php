@@ -193,7 +193,7 @@
                                         aria-label="Print Purchase Order {{ $po->purchase_order_no }}">
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
   <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
-  <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1"/>
+  <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1"/>
 </svg>                                </button>
                             </div>
                         </td>
@@ -203,8 +203,98 @@
          </table>
          </div>
      </div>
- </div>
+</div>
 <div class="mt-3 d-flex justify-content-center">{{ $pos->links() }}</div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Order Information Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Order Information</h6>
+                            <div class="mb-2"><strong>Purchase Order:</strong> <span id="order_po_number" class="text-primary"></span></div>
+                            <div class="mb-2"><strong>Ordered By:</strong> <span id="order_made_by"></span></div>
+                            <div class="mb-2"><strong>Date Requested:</strong> <span id="order_date_requested"></span></div>
+                            <div class="mb-2"><strong>Delivery Date:</strong> <span id="order_delivery_date"></span></div>
+                            <div class="mb-2"><strong>Created:</strong> <span id="order_created_at"></span></div>
+                            <div class="mb-2"><strong>Last Updated:</strong> <span id="order_updated_at"></span></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Order Details</h6>
+                            <div class="mb-2"><strong>Purpose:</strong> <span id="order_purpose"></span></div>
+                            <div class="mb-2"><strong>Supplier:</strong> <span id="order_supplier"></span></div>
+                            <div class="mb-2"><strong>Status:</strong> <span id="order_status" class="badge"></span></div>
+                            <div class="mb-2"><strong>Remarks:</strong> <span id="order_remarks" class="text-muted"></span></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Totals Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h6 class="text-muted mb-3">Order Totals</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-light rounded">
+                                        <small class="text-muted">Subtotal</small>
+                                        <div class="fw-bold" id="order_subtotal">₱0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-light rounded">
+                                        <small class="text-muted">Shipping</small>
+                                        <div class="fw-bold" id="order_shipping">₱0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-light rounded">
+                                        <small class="text-muted">Discount</small>
+                                        <div class="fw-bold" id="order_discount">₱0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-primary text-white rounded">
+                                        <small>Total</small>
+                                        <div class="fw-bold" id="order_total">₱0.00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Items Section -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-3">Order Items</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Description</th>
+                                        <th class="text-end">Quantity</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="order_items">
+                                    <!-- Items will be dynamically populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit PO Modal -->
     <div class="modal fade" id="editPOModal" tabindex="-1">
@@ -486,6 +576,7 @@
         </div>
     </div>
 
+
     @vite(['resources/js/pages/po-index.js', 'resources/js/pages/po-edit.js'])
 
 
@@ -754,6 +845,3 @@
         });
     </script>
 @endpush
-
-
-

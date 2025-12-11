@@ -78,20 +78,13 @@ class StatusSync {
 
     async performSync() {
         try {
-            // Check if we have a CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (!csrfToken) {
-                console.warn('No CSRF token found for status sync');
-                this.pauseSync();
-                return;
-            }
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-            // Make status request
             const response = await fetch('/superadmin?ajax=status', {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {})
                 },
                 credentials: 'same-origin'
             });

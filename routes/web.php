@@ -166,6 +166,9 @@ Route::prefix('status')->name('status.')->group(function () {
 // Dynamic CSS route
 Route::get('/css/dynamic-status.css', [SettingsController::class, 'dynamicStatusCss'])->name('dynamic.status.css');
 
+// API route for purchase order details (session-based auth)
+Route::get('/api/purchase-orders/{poNo}', [PurchaseOrderController::class, 'getOrderDetails'])->name('api.purchase-orders.details');
+
 // Constants routes
 Route::get('/api/constants/public', [ConstantsController::class, 'getPublicConstants'])->name('constants.public');
 Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {

@@ -4,26 +4,21 @@ import './po-print-direct.js';
 
 document.addEventListener('DOMContentLoaded', function(){
   var table = document.getElementById('po-index-table');
-  if (!table) return;
-  var jsonTemplate = table.getAttribute('data-po-show-template');
-  if (!jsonTemplate) return;
+  var jsonTemplate = table ? table.getAttribute('data-po-show-template') : null;
 
-  // View PO Modal Handler
-  table.addEventListener('click', async function(e){
-    var btn = e.target && e.target.closest('.btn-view-po');
-    if (!btn) return;
-    var po = btn.getAttribute('data-po');
-    var url = jsonTemplate.replace('__po__', po);
-    try {
-      var r = await fetch(url);
-      if (!r.ok) return;
-      var d = await r.json();
-      fillPoModal(d);
-      if (window.bootstrap && document.getElementById('poModal')) {
-        new bootstrap.Modal(document.getElementById('poModal')).show();
-      }
-    } catch (_) {}
-  });
+  // View PO Modal Handler (use new Order Details modal)
+  if (table) {
+    table.addEventListener('click', function(e){
+      var btn = e.target && e.target.closest('.btn-view-po');
+      if (!btn) return;
+      var po = btn.getAttribute('data-po');
+      // Use the new API-backed modal
+      fetchOrderDetails(po);
+      // Prevent any other handlers from running for this click
+      e.stopPropagation();
+      e.preventDefault();
+    });
+  }
 
   // Edit PO Modal Handler
   window.editPO = function editPO(poNo, purpose, supplierId, dateRequested, deliveryDate){
@@ -409,6 +404,146 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }, 3000);
   }
+
+  // Note: View button event handler is already handled by table event delegation above (line 12-21)
+
+  /**
+   * Open PO modal automatically when redirected with ?open_po=XXX
+   */
+  function initOpenPoFromQuery(){
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var openPo = params.get('open_po');
+      if (!openPo) return;
+
+      fetchOrderDetails(openPo);
+
+      // Remove the param to avoid repeated modal openings on refresh
+      params.delete('open_po');
+      var newQuery = params.toString();
+      var newUrl = window.location.pathname + (newQuery ? ('?' + newQuery) : '');
+      window.history.replaceState({}, '', newUrl);
+    } catch (err) {
+      console.error('[PO Modal] Failed to auto-open from query param', err);
+    }
+  }
+
+  /**
+   * Fetch order details and populate the modal
+   */
+  async function fetchOrderDetails(poNumber) {
+    try {
+      const response = await fetch(`/api/purchase-orders/${poNumber}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      if (data.success) {
+        // Populate order information fields
+        document.getElementById('order_po_number').textContent = data.order.purchase_order_no || '';
+        document.getElementById('order_made_by').textContent = data.order.made_by || 'N/A';
+        document.getElementById('order_date_requested').textContent = data.order.date_requested || 'N/A';
+        document.getElementById('order_delivery_date').textContent = data.order.delivery_date || 'N/A';
+        
+        // Format and display created/updated dates
+        const formatDate = (dateStr) => {
+          if (!dateStr) return 'N/A';
+          try {
+            return new Date(dateStr).toLocaleString();
+          } catch {
+            return dateStr;
+          }
+        };
+        document.getElementById('order_created_at').textContent = formatDate(data.order.created_at);
+        document.getElementById('order_updated_at').textContent = formatDate(data.order.updated_at);
+        
+        // Populate order details
+        document.getElementById('order_purpose').textContent = data.order.purpose || 'N/A';
+        document.getElementById('order_supplier').textContent = data.order.supplier_name || 'N/A';
+        
+        // Set status with appropriate styling
+        const statusElement = document.getElementById('order_status');
+        statusElement.textContent = data.order.status_name || 'N/A';
+        statusElement.className = 'badge bg-secondary'; // Default styling
+        
+        // Add status-specific styling
+        const statusName = data.order.status_name;
+        if (statusName) {
+          statusElement.classList.remove('bg-secondary');
+          switch(statusName.toLowerCase()) {
+            case 'pending':
+              statusElement.classList.add('bg-warning');
+              break;
+            case 'verified':
+              statusElement.classList.add('bg-info');
+              break;
+            case 'approved':
+              statusElement.classList.add('bg-success');
+              break;
+            case 'received':
+              statusElement.classList.add('bg-primary');
+              break;
+            case 'rejected':
+              statusElement.classList.add('bg-danger');
+              break;
+            default:
+              statusElement.classList.add('bg-secondary');
+          }
+        }
+        
+        document.getElementById('order_remarks').textContent = data.order.remarks || 'No remarks';
+        
+        // Populate order totals
+        const formatCurrency = (amount) => {
+          const num = Number(amount || 0);
+          return `₱${num.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        };
+        
+        document.getElementById('order_subtotal').textContent = formatCurrency(data.order.subtotal);
+        document.getElementById('order_shipping').textContent = formatCurrency(data.order.shipping_fee);
+        document.getElementById('order_discount').textContent = formatCurrency(data.order.discount);
+        document.getElementById('order_total').textContent = formatCurrency(data.order.total);
+
+        // Populate items
+        const itemsTable = document.getElementById('order_items');
+        itemsTable.innerHTML = '';
+        (data.items || []).forEach(item => {
+          const qty = Number(item.quantity || 0);
+          const price = Number(item.unit_price || 0);
+          const totalCost = Number(item.total_cost || (qty * price));
+          const row = `<tr>
+              <td>${item.item_name || 'N/A'}</td>
+              <td>${item.description || 'N/A'}</td>
+              <td class="text-end">${qty}</td>
+              <td class="text-end">${formatCurrency(price)}</td>
+              <td class="text-end">${formatCurrency(totalCost)}</td>
+          </tr>`;
+          itemsTable.insertAdjacentHTML('beforeend', row);
+        });
+
+        // Show modal
+        const orderDetailsModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        orderDetailsModal.show();
+      } else {
+        alert('Failed to fetch order details. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        poNumber: poNumber
+      });
+      alert(`Error fetching order details: ${error.message}. Please check the console for more details.`);
+    }
+  }
+
+  // Trigger auto-open if redirected with ?open_po
+  initOpenPoFromQuery();
 });
 
 // Global functions for status change modal (must be outside DOMContentLoaded)
@@ -460,5 +595,3 @@ window.selectStatus = function(element) {
     confirmBtn.disabled = true;
   }
 };
-
-
