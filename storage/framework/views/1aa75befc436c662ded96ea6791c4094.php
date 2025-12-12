@@ -134,9 +134,8 @@
             <div id="items"></div>
         </div></div>
 
-        <div class="mt-3 d-flex justify-content-end gap-2">
+            <div class="mt-3 d-flex justify-content-end gap-2">
             <button class="btn btn-outline-primary" type="submit" name="action" value="save">Save</button>
-            <button class="btn btn-primary" type="submit" name="action" value="save_and_print">Save & Print</button>
         </div>
     </form>
 

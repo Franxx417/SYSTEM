@@ -122,9 +122,9 @@
         </div>
     </div>
 
-    <?php if(session('success')): ?>
+    <?php if(session('status') || session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php echo e(session('success')); ?>
+            <?php echo e(session('status') ?? session('success')); ?>
 
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -141,7 +141,7 @@
     <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped table-hover mb-0" id="po-index-table" data-po-show-template="<?php echo e(route('po.show_json','__po__')); ?>">
+            <table class="table table-striped table-hover mb-0" id="po-index-table" data-po-show-template="<?php echo e(route('po.show_json','__po__')); ?>" data-open-po="<?php echo e(session('open_po')); ?>">
                 <thead class="table-light">
                     <tr>
                         <th>No.</th>

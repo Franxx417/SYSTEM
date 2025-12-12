@@ -121,9 +121,9 @@
         </div>
     </div>
 
-    @if(session('success'))
+    @if(session('status') || session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            {{ session('status') ?? session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
@@ -138,7 +138,7 @@
     <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped table-hover mb-0" id="po-index-table" data-po-show-template="{{ route('po.show_json','__po__') }}">
+            <table class="table table-striped table-hover mb-0" id="po-index-table" data-po-show-template="{{ route('po.show_json','__po__') }}" data-open-po="{{ session('open_po') }}">
                 <thead class="table-light">
                     <tr>
                         <th>No.</th>

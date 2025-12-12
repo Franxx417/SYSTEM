@@ -4,21 +4,21 @@ import './po-print-direct.js';
 
 document.addEventListener('DOMContentLoaded', function(){
   var table = document.getElementById('po-index-table');
-  var jsonTemplate = table ? table.getAttribute('data-po-show-template') : null;
+  if (!table) return;
+  var jsonTemplate = table.getAttribute('data-po-show-template');
+  if (!jsonTemplate) return;
 
   // View PO Modal Handler (use new Order Details modal)
-  if (table) {
-    table.addEventListener('click', function(e){
-      var btn = e.target && e.target.closest('.btn-view-po');
-      if (!btn) return;
-      var po = btn.getAttribute('data-po');
-      // Use the new API-backed modal
-      fetchOrderDetails(po);
-      // Prevent any other handlers from running for this click
-      e.stopPropagation();
-      e.preventDefault();
-    });
-  }
+  table.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest('.btn-view-po');
+    if (!btn) return;
+    var po = btn.getAttribute('data-po');
+    // Use the new API-backed modal
+    fetchOrderDetails(po);
+    // Prevent any other handlers from running for this click
+    e.stopPropagation();
+    e.preventDefault();
+  });
 
   // Edit PO Modal Handler
   window.editPO = function editPO(poNo, purpose, supplierId, dateRequested, deliveryDate){
@@ -408,27 +408,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // Note: View button event handler is already handled by table event delegation above (line 12-21)
 
   /**
-   * Open PO modal automatically when redirected with ?open_po=XXX
-   */
-  function initOpenPoFromQuery(){
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var openPo = params.get('open_po');
-      if (!openPo) return;
-
-      fetchOrderDetails(openPo);
-
-      // Remove the param to avoid repeated modal openings on refresh
-      params.delete('open_po');
-      var newQuery = params.toString();
-      var newUrl = window.location.pathname + (newQuery ? ('?' + newQuery) : '');
-      window.history.replaceState({}, '', newUrl);
-    } catch (err) {
-      console.error('[PO Modal] Failed to auto-open from query param', err);
-    }
-  }
-
-  /**
    * Fetch order details and populate the modal
    */
   async function fetchOrderDetails(poNumber) {
@@ -542,8 +521,12 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  // Trigger auto-open if redirected with ?open_po
-  initOpenPoFromQuery();
+  // If redirected after creation/update with an open_po flag, auto-open the modal
+  const openPo = table.dataset.openPo;
+  if (openPo) {
+    // slight delay to ensure bootstrap is ready
+    setTimeout(() => fetchOrderDetails(openPo), 150);
+  }
 });
 
 // Global functions for status change modal (must be outside DOMContentLoaded)

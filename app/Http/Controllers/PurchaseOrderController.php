@@ -273,39 +273,49 @@ class PurchaseOrderController extends Controller
             return back()->withErrors(['create' => 'Failed to create Purchase Order. '.$e->getMessage()])->withInput();
         }
 
-        // Check if user clicked "Save & Print" button
-        if ($request->input('action') === 'save_and_print') {
-            return redirect()->route('po.print', $created['po_no'])->with('status', 'Purchase Order created and ready to print');
-        }
-        
-        return redirect()->route('po.show', $created['po_no'])->with('status','Purchase Order created');
+                
+        return redirect()
+            ->route('po.index')
+            ->with('status','Purchase Order created')
+            ->with('open_po', $created['po_no']);
         
         
     }
 
-    /** Show PO details by human-readable PO number (redirects to modal flow on index) */
+    /** Show PO details by human-readable PO number */
     public function show(Request $request, string $poNo)
     {
         $auth = $this->requireRole($request, 'requestor');
-
         $po = DB::table('purchase_orders as po')
-            ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
-            ->leftJoin('approvals as ap', 'ap.purchase_order_id', '=', 'po.purchase_order_id')
-            ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
+            ->leftJoin('suppliers as s','s.supplier_id','=','po.supplier_id')
+            ->leftJoin('approvals as ap','ap.purchase_order_id','=','po.purchase_order_id')
+            ->leftJoin('statuses as st','st.status_id','=','ap.status_id')
             ->where('po.purchase_order_no', $poNo)
             ->where('po.requestor_id', $auth['user_id'])
-            ->whereNotNull('st.status_name') // Only show POs with status
-            ->select('po.purchase_order_id')
+            ->select(
+                'po.*',
+                's.name as supplier_name',
+                's.tin_no',
+                's.vat_type',
+                's.contact_person',
+                's.contact_number',
+                's.address as supplier_address',
+                'st.status_name',
+                'ap.remarks'
+            )
             ->first();
 
-        if (!$po) {
-            abort(404);
-        }
+        if (!$po) abort(404);
 
-        // Redirect to the index page and trigger the existing modal-based show flow
-        return redirect()
-            ->route('po.index', ['open_po' => $poNo])
-            ->with('status', $request->session()->get('status'));
+        $items = DB::table('items')->where('purchase_order_id', $po->purchase_order_id)->get();
+
+        // Reuse existing print view (no new blade needed)
+        $brandingService = app(\App\Services\BrandingService::class);
+        $branding = $brandingService->getPrintData();
+        $companyLogo = $branding['company_logo'];
+        $companyName = $branding['company_name'];
+
+        return view('po.print', compact('po','items','auth','companyLogo','companyName','branding'));
     }
 
     /** Edit PO basic fields */
