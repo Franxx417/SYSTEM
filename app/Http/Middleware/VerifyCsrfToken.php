@@ -22,7 +22,6 @@ class VerifyCsrfToken extends Middleware
      * Handle an incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @return mixed
      *
      * @throws \Illuminate\Session\TokenMismatchException
@@ -39,12 +38,12 @@ class VerifyCsrfToken extends Middleware
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
-            
+
             // Redirect back with error message
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'CSRF token mismatch. Please refresh the page and try again.'], 419);
             }
-            
+
             return redirect()->back()->withInput($request->except('_token'))
                 ->withErrors(['csrf_error' => 'Your session has expired. Please refresh the page and try again.']);
         }

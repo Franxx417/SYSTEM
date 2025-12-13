@@ -16,7 +16,7 @@ class SuppliersSeeder extends Seeder
             ['name' => 'OfficeHub Trading', 'address' => 'Unit 8, Business Center, Quezon City', 'vat_type' => 'Non_VAT', 'contact_person' => 'Lara Cruz', 'contact_number' => '0917-000-2222', 'tin_no' => '234-567-890'],
         ];
         foreach ($suppliers as $s) {
-            if (!DB::table('suppliers')->where('name', $s['name'])->exists()) {
+            if (! DB::table('suppliers')->where('name', $s['name'])->exists()) {
                 DB::table('suppliers')->insert([
                     'supplier_id' => (string) Str::uuid(),
                     ...$s,
@@ -25,11 +25,3 @@ class SuppliersSeeder extends Seeder
         }
     }
 }
-
-
-
-
-
-
-
-

@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('purchase_orders')) {
+        if (! Schema::hasTable('purchase_orders')) {
             Schema::create('purchase_orders', function (Blueprint $table) {
                 $table->uuid('purchase_order_id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->uuid('requestor_id')->nullable();
@@ -36,5 +36,3 @@ return new class extends Migration
         Schema::dropIfExists('purchase_orders');
     }
 };
-
-

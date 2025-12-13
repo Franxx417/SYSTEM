@@ -8,6 +8,11 @@ class SuperadminDashboard {
     constructor() {
         this.currentTab = this.getCurrentTab();
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        this.poSystemState = {
+            page: 1,
+            sort_by: 'created_at',
+            sort_dir: 'desc'
+        };
         this.init();
     }
 
@@ -32,12 +37,254 @@ class SuperadminDashboard {
 
         // Tab-specific event listeners
         this.bindOverviewEvents();
+        this.bindPurchaseOrdersEvents();
         this.bindUserManagementEvents();
         this.bindSecurityEvents();
         this.bindSystemEvents();
         this.bindDatabaseEvents();
         this.bindLogsEvents();
         this.bindBrandingEvents();
+    }
+
+    // =========================
+    // PURCHASE ORDERS TAB (SYSTEM-WIDE)
+    // =========================
+    bindPurchaseOrdersEvents() {
+        const table = document.getElementById('po-system-table');
+        if (!table) return;
+
+        const refreshBtn = document.querySelector('[data-action="po-refresh"]');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.loadSystemPurchaseOrders({ noCache: true }));
+        }
+
+        const form = document.getElementById('po-system-filters');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.poSystemState.page = 1;
+                this.loadSystemPurchaseOrders();
+            });
+        }
+
+        // Sorting
+        table.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-po-sort]');
+            if (!btn) return;
+            const sortBy = btn.getAttribute('data-po-sort');
+            if (!sortBy) return;
+
+            if (this.poSystemState.sort_by === sortBy) {
+                this.poSystemState.sort_dir = this.poSystemState.sort_dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.poSystemState.sort_by = sortBy;
+                this.poSystemState.sort_dir = 'asc';
+            }
+            this.poSystemState.page = 1;
+            this.loadSystemPurchaseOrders();
+        });
+
+        // Pagination
+        const pagination = document.getElementById('po-system-pagination');
+        if (pagination) {
+            pagination.addEventListener('click', (e) => {
+                const link = e.target.closest('[data-po-page]');
+                if (!link) return;
+                e.preventDefault();
+                const page = Number(link.getAttribute('data-po-page'));
+                if (!page || page < 1) return;
+                this.poSystemState.page = page;
+                this.loadSystemPurchaseOrders();
+            });
+        }
+    }
+
+    async loadSystemPurchaseOrders(options = {}) {
+        const table = document.getElementById('po-system-table');
+        const tbody = document.getElementById('po-system-tbody');
+        const loading = document.getElementById('po-system-loading');
+        const errorBox = document.getElementById('po-system-error');
+        const emptyBox = document.getElementById('po-system-empty');
+        const summary = document.getElementById('po-system-summary');
+        const pagination = document.getElementById('po-system-pagination');
+        const form = document.getElementById('po-system-filters');
+
+        if (!table || !tbody) return;
+
+        const noCache = !!options.noCache;
+
+        if (loading) loading.style.display = '';
+        if (errorBox) {
+            errorBox.style.display = 'none';
+            errorBox.innerHTML = '';
+        }
+        if (emptyBox) emptyBox.style.display = 'none';
+        tbody.innerHTML = '';
+        if (summary) summary.textContent = '';
+        if (pagination) pagination.innerHTML = '';
+
+        try {
+            const params = new URLSearchParams();
+            params.set('page', String(this.poSystemState.page));
+            params.set('sort_by', this.poSystemState.sort_by);
+            params.set('sort_dir', this.poSystemState.sort_dir);
+            if (noCache) params.set('no_cache', '1');
+
+            if (form) {
+                const fd = new FormData(form);
+                for (const [k, v] of fd.entries()) {
+                    if (v !== null && String(v).trim() !== '') {
+                        params.set(k, String(v));
+                    }
+                }
+            }
+
+            const response = await this.makeRequest(`/api/superadmin/purchase-orders?${params.toString()}`, 'GET');
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to load purchase orders');
+            }
+
+            const rows = Array.isArray(response.data) ? response.data : [];
+            const meta = response.meta || {};
+
+            this.populatePoSystemFilters(meta.filters);
+            this.renderPoSystemRows(rows);
+            this.renderPoSystemSummary(meta);
+            this.renderPoSystemPagination(meta);
+
+            if (rows.length === 0 && emptyBox) {
+                emptyBox.style.display = '';
+            }
+        } catch (error) {
+            const message = (error && error.responseData && (error.responseData.error || error.responseData.message))
+                ? (error.responseData.error || error.responseData.message)
+                : (error.message || 'Failed to load purchase orders');
+
+            if (errorBox) {
+                errorBox.style.display = '';
+                errorBox.innerHTML = `<div class="alert alert-danger mb-0">${this.sanitizeHTML(message)}</div>`;
+            }
+        } finally {
+            if (loading) loading.style.display = 'none';
+        }
+    }
+
+    populatePoSystemFilters(filters) {
+        if (!filters) return;
+
+        const form = document.getElementById('po-system-filters');
+        if (!form) return;
+
+        const statusSelect = form.querySelector('select[name="status"]');
+        const supplierSelect = form.querySelector('select[name="supplier_id"]');
+
+        if (statusSelect && Array.isArray(filters.statuses) && statusSelect.options.length <= 1) {
+            filters.statuses.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st.status_id;
+                opt.textContent = st.status_name;
+                statusSelect.appendChild(opt);
+            });
+        }
+
+        if (supplierSelect && Array.isArray(filters.suppliers) && supplierSelect.options.length <= 1) {
+            filters.suppliers.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.supplier_id;
+                opt.textContent = s.name;
+                supplierSelect.appendChild(opt);
+            });
+        }
+    }
+
+    renderPoSystemRows(rows) {
+        const tbody = document.getElementById('po-system-tbody');
+        if (!tbody) return;
+
+        const formatMoney = (v) => {
+            const num = Number(v);
+            if (isNaN(num)) return '₱0.00';
+            return `₱${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        };
+
+        tbody.innerHTML = rows.map(r => {
+            const poNo = this.sanitizeHTML(String(r.purchase_order_no || ''));
+            const date = this.sanitizeHTML(String(r.date_requested || ''));
+            const vendor = this.sanitizeHTML(String(r.supplier_name || '—'));
+            const status = this.sanitizeHTML(String(r.status_name || '—'));
+            const total = formatMoney(r.total);
+            return `
+                <tr>
+                    <td>${poNo}</td>
+                    <td>${date}</td>
+                    <td>${vendor}</td>
+                    <td class="text-end">${total}</td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    renderPoSystemSummary(meta) {
+        const summary = document.getElementById('po-system-summary');
+        if (!summary) return;
+        const from = meta.from || 0;
+        const to = meta.to || 0;
+        const total = meta.total || 0;
+        summary.textContent = total ? `Showing ${from}-${to} of ${total}` : '';
+    }
+
+    renderPoSystemPagination(meta) {
+        const pagination = document.getElementById('po-system-pagination');
+        if (!pagination) return;
+        const current = Number(meta.current_page || 1);
+        const last = Number(meta.last_page || 1);
+        if (last <= 1) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        const mkItem = (page, label, disabled = false, active = false) => {
+            const cls = ['page-item'];
+            if (disabled) cls.push('disabled');
+            if (active) cls.push('active');
+            const attrs = disabled ? '' : `href="#" data-po-page="${page}"`;
+            return `
+                <li class="${cls.join(' ')}">
+                    <a class="page-link" ${attrs}>${label}</a>
+                </li>
+            `;
+        };
+
+        const windowSize = 3;
+        const start = Math.max(1, current - windowSize);
+        const end = Math.min(last, current + windowSize);
+
+        let html = '<ul class="pagination pagination-sm mb-0">';
+        html += mkItem(current - 1, '&laquo;', current <= 1);
+
+        if (start > 1) {
+            html += mkItem(1, '1', false, current === 1);
+            if (start > 2) {
+                html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+            }
+        }
+
+        for (let p = start; p <= end; p++) {
+            html += mkItem(p, String(p), false, p === current);
+        }
+
+        if (end < last) {
+            if (end < last - 1) {
+                html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+            }
+            html += mkItem(last, String(last), false, current === last);
+        }
+
+        html += mkItem(current + 1, '&raquo;', current >= last);
+        html += '</ul>';
+        pagination.innerHTML = html;
     }
 
     // =========================
@@ -275,12 +522,175 @@ class SuperadminDashboard {
             });
         }
 
+        // Refresh security overview
+        const refreshBtn = document.querySelector('[data-action="security-refresh"]');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.refreshSecurityOverview());
+        }
+
+        // Refresh security alerts
+        const refreshAlertsBtn = document.querySelector('[data-action="security-refresh-alerts"]');
+        if (refreshAlertsBtn) {
+            refreshAlertsBtn.addEventListener('click', () => this.refreshSecurityAlerts());
+        }
+
+        const severityFilter = document.getElementById('alert-severity-filter');
+        if (severityFilter) {
+            severityFilter.addEventListener('change', () => this.refreshSecurityAlerts());
+        }
+
         // Force logout all sessions
         const forceLogoutBtn = document.querySelector('[data-action="force-logout-all"]');
         if (forceLogoutBtn) {
             forceLogoutBtn.addEventListener('click', () => this.forceLogoutAllSessions());
         }
         // Active Sessions UI removed; no terminate-session bindings
+    }
+
+    async refreshSecurityOverview(silent = false) {
+        const statusBadge = document.getElementById('security-status');
+        if (!silent && statusBadge) {
+            statusBadge.className = 'badge bg-secondary';
+            statusBadge.textContent = 'Loading';
+        }
+
+        try {
+            const response = await this.makeRequest('/api/superadmin/security/stats', 'GET');
+            if (response.success && response.data) {
+                this.updateSecurityOverviewCards(response.data);
+                this.updateSecurityStatusBadge(response.data);
+                if (!silent) {
+                    this.showNotification('Security data refreshed', 'success');
+                }
+            } else if (!silent) {
+                this.showNotification(response.error || 'Failed to refresh security data', 'error');
+            }
+        } catch (error) {
+            if (!silent) {
+                const serverMsg = error && error.responseData && (error.responseData.error || error.responseData.message) ?
+                    (error.responseData.error || error.responseData.message) : null;
+                this.showNotification(serverMsg ? `Failed to refresh security data: ${serverMsg}` : 'Failed to refresh security data', 'error');
+            }
+            if (statusBadge) {
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.textContent = 'Error';
+            }
+        }
+    }
+
+    updateSecurityOverviewCards(stats) {
+        const activeSessionsEl = document.getElementById('active-sessions-count');
+        const loginRateEl = document.getElementById('login-success-rate');
+        const alertsCountEl = document.getElementById('security-alerts-count');
+        const activitiesEl = document.getElementById('activities-24h');
+
+        if (activeSessionsEl) activeSessionsEl.textContent = this.formatNumber(stats.active_sessions_count, '0');
+        if (alertsCountEl) alertsCountEl.textContent = this.formatNumber(stats.unresolved_alerts, '0');
+        if (activitiesEl) activitiesEl.textContent = this.formatNumber(stats.activities_last_24h, '0');
+        if (loginRateEl) {
+            const rate = (stats.login_success_rate === null || stats.login_success_rate === undefined) ? 0 : Number(stats.login_success_rate);
+            loginRateEl.textContent = `${isNaN(rate) ? 0 : rate.toFixed(1)}%`;
+        }
+    }
+
+    updateSecurityStatusBadge(stats) {
+        const statusBadge = document.getElementById('security-status');
+        if (!statusBadge) return;
+
+        const critical = Number(stats.critical_alerts || 0);
+        const unresolved = Number(stats.unresolved_alerts || 0);
+
+        if (critical > 0) {
+            statusBadge.className = 'badge bg-danger';
+            statusBadge.textContent = 'Critical';
+        } else if (unresolved > 0) {
+            statusBadge.className = 'badge bg-warning';
+            statusBadge.textContent = 'Alerts';
+        } else {
+            statusBadge.className = 'badge bg-success';
+            statusBadge.textContent = 'Secure';
+        }
+    }
+
+    async refreshSecurityAlerts(silent = false) {
+        const container = document.getElementById('alerts-container');
+        if (!container) return;
+
+        if (!silent) {
+            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm" role="status"></div> Loading alerts...</div>';
+        }
+
+        const severity = document.getElementById('alert-severity-filter')?.value;
+        const qs = severity ? `?severity=${encodeURIComponent(severity)}` : '';
+
+        try {
+            const response = await this.makeRequest(`/api/superadmin/security/alerts${qs}`, 'GET');
+            if (response.success && response.data) {
+                const alerts = response.data.alerts || [];
+                this.renderSecurityAlerts(alerts, container);
+                if (!silent) {
+                    this.showNotification('Security alerts refreshed', 'success');
+                }
+            } else {
+                container.innerHTML = '<div class="alert alert-danger">Failed to load alerts</div>';
+                if (!silent) {
+                    this.showNotification(response.error || 'Failed to load alerts', 'error');
+                }
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load alerts</div>';
+            if (!silent) {
+                const serverMsg = error && error.responseData && (error.responseData.error || error.responseData.message) ?
+                    (error.responseData.error || error.responseData.message) : null;
+                this.showNotification(serverMsg ? `Failed to load alerts: ${serverMsg}` : 'Failed to load alerts', 'error');
+            }
+        }
+    }
+
+    renderSecurityAlerts(alerts, container) {
+        if (!alerts || alerts.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-success py-4">
+                    <i class="fas fa-shield-check fa-3x mb-3"></i>
+                    <h5>No Security Alerts</h5>
+                    <p class="text-muted">Your system is secure with no pending alerts.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const severityClass = (sev) => {
+            const s = (sev || '').toLowerCase();
+            if (s === 'critical') return 'danger';
+            if (s === 'high') return 'warning';
+            if (s === 'medium') return 'info';
+            if (s === 'low') return 'secondary';
+            return 'secondary';
+        };
+
+        let html = '<div class="list-group">';
+        alerts.forEach(a => {
+            const sev = a.severity || a.type || 'info';
+            const title = a.title || 'Security Alert';
+            const description = a.description || a.message || '';
+            const createdAt = a.created_at || '';
+            html += `
+                <div class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="me-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-${severityClass(sev)}">${this.sanitizeHTML(String(sev)).toUpperCase()}</span>
+                                <strong>${this.sanitizeHTML(String(title))}</strong>
+                            </div>
+                            <div class="text-muted small">${this.sanitizeHTML(String(description))}</div>
+                        </div>
+                        <div class="text-muted small">${this.sanitizeHTML(String(createdAt))}</div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     async updateSecuritySettings(formData) {
@@ -931,6 +1341,9 @@ class SuperadminDashboard {
         // Branding form
         const brandingForm = document.querySelector('#branding-form');
         if (brandingForm) {
+            if (brandingForm.dataset.brandingJs === '1') return;
+            if (brandingForm.dataset.brandingSaBound === '1') return;
+            brandingForm.dataset.brandingSaBound = '1';
             brandingForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.updateBranding(new FormData(brandingForm));
@@ -1393,6 +1806,18 @@ class SuperadminDashboard {
                 break;
             case 'overview':
                 setTimeout(() => this.refreshSystemMetrics(), 500);
+                break;
+            case 'purchase-orders':
+                setTimeout(() => {
+                    this.poSystemState.page = 1;
+                    this.loadSystemPurchaseOrders({ noCache: false });
+                }, 300);
+                break;
+            case 'security':
+                setTimeout(() => {
+                    this.refreshSecurityOverview(true);
+                    this.refreshSecurityAlerts(true);
+                }, 500);
                 break;
             case 'logs':
                 setTimeout(() => this.loadRecentLogs(), 500);

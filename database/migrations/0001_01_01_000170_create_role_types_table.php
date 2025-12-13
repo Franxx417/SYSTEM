@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('role_types')) {
+        if (! Schema::hasTable('role_types')) {
             Schema::create('role_types', function (Blueprint $table) {
                 $table->uuid('role_type_id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->string('user_role_type', 50);
@@ -23,5 +23,3 @@ return new class extends Migration
         Schema::dropIfExists('role_types');
     }
 };
-
-

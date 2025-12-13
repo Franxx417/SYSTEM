@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Services\ConstantsService;
+use Illuminate\Http\Request;
 
 class ConstantsController extends Controller
 {
@@ -51,7 +51,7 @@ class ConstantsController extends Controller
     {
         // Check if user is superadmin
         $auth = $request->session()->get('auth_user');
-        if (!$auth || $auth['role'] !== ConstantsService::get('roles.superadmin', 'superadmin')) {
+        if (! $auth || $auth['role'] !== ConstantsService::get('roles.superadmin', 'superadmin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -85,7 +85,7 @@ class ConstantsController extends Controller
     {
         // Check if user is superadmin
         $auth = $request->session()->get('auth_user');
-        if (!$auth || $auth['role'] !== ConstantsService::get('roles.superadmin', 'superadmin')) {
+        if (! $auth || $auth['role'] !== ConstantsService::get('roles.superadmin', 'superadmin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -108,7 +108,3 @@ class ConstantsController extends Controller
         return response()->json(['error' => 'Failed to update constant'], 500);
     }
 }
-
-
-
-

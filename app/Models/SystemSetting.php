@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 
@@ -12,7 +12,7 @@ class SystemSetting extends Model
     use HasUuids;
 
     protected $table = 'system_settings';
-    
+
     protected $fillable = [
         'category',
         'key',
@@ -112,16 +112,16 @@ class SystemSetting extends Model
     public static function get($key, $default = null, $category = null)
     {
         $cacheKey = $category ? "setting_{$category}_{$key}" : "setting_{$key}";
-        
+
         return Cache::remember($cacheKey, 3600, function () use ($key, $default, $category) {
             $query = self::where('key', $key);
-            
+
             if ($category) {
                 $query->where('category', $category);
             }
-            
+
             $setting = $query->first();
-            
+
             return $setting ? $setting->value : $default;
         });
     }
@@ -147,7 +147,7 @@ class SystemSetting extends Model
     public static function getByCategory($category)
     {
         $cacheKey = "settings_category_{$category}";
-        
+
         return Cache::remember($cacheKey, 3600, function () use ($category) {
             return self::byCategory($category)
                 ->ordered()
@@ -174,7 +174,7 @@ class SystemSetting extends Model
     // Validation
     public function validateValue($value)
     {
-        if (!$this->validation_rules) {
+        if (! $this->validation_rules) {
             return true;
         }
 
@@ -197,7 +197,7 @@ class SystemSetting extends Model
                 'max_login_attempts' => ['value' => 5, 'type' => 'integer', 'description' => 'Maximum failed login attempts before lockout'],
                 'lockout_duration' => ['value' => 15, 'type' => 'integer', 'description' => 'Account lockout duration in minutes'],
             ],
-            
+
             // Security
             'security' => [
                 'session_timeout' => ['value' => 120, 'type' => 'integer', 'description' => 'Session timeout in minutes'],
@@ -206,7 +206,7 @@ class SystemSetting extends Model
                 'ip_whitelist' => ['value' => '', 'type' => 'string', 'description' => 'Comma-separated list of allowed IP addresses'],
                 'security_headers' => ['value' => true, 'type' => 'boolean', 'description' => 'Enable security headers'],
             ],
-            
+
             // Notifications
             'notifications' => [
                 'email_enabled' => ['value' => true, 'type' => 'boolean', 'description' => 'Enable email notifications'],
@@ -215,7 +215,7 @@ class SystemSetting extends Model
                 'security_alerts' => ['value' => true, 'type' => 'boolean', 'description' => 'Send security alert notifications'],
                 'system_maintenance' => ['value' => true, 'type' => 'boolean', 'description' => 'Send system maintenance notifications'],
             ],
-            
+
             // Performance
             'performance' => [
                 'cache_enabled' => ['value' => true, 'type' => 'boolean', 'description' => 'Enable application caching'],
@@ -224,7 +224,7 @@ class SystemSetting extends Model
                 'pagination_limit' => ['value' => 50, 'type' => 'integer', 'description' => 'Default pagination limit'],
                 'log_level' => ['value' => 'info', 'type' => 'string', 'description' => 'Application log level'],
             ],
-            
+
             // Application
             'application' => [
                 'app_name' => ['value' => 'Procurement System', 'type' => 'string', 'description' => 'Application name', 'is_public' => true],

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DashboardController
  *
@@ -8,12 +9,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use App\Services\SystemMonitoringService;
 use App\Services\ConstantsService;
-
+use App\Services\SystemMonitoringService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -32,6 +33,7 @@ class DashboardController extends Controller
     private function getCachedMetrics($userId, $role, $callback)
     {
         $cacheKey = "dashboard_metrics_{$role}_{$userId}";
+
         return Cache::remember($cacheKey, $this->getCacheDuration(), $callback);
     }
 
@@ -39,7 +41,7 @@ class DashboardController extends Controller
     {
         // Pull the minimal user payload we stored on login
         $auth = $request->session()->get('auth_user');
-        if (!$auth) {
+        if (! $auth) {
             return redirect()->route('login');
         }
 
@@ -51,9 +53,9 @@ class DashboardController extends Controller
         if ($auth['role'] === $roles['requestor']) {
             // Recent POs for requestor
             $data['recentPOs'] = DB::table('purchase_orders as po')
-                ->leftJoin('approvals as ap', function($join) {
+                ->leftJoin('approvals as ap', function ($join) {
                     $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                         ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                        ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                 })
                 ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                 ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
@@ -63,29 +65,29 @@ class DashboardController extends Controller
                 ->orderByDesc('po.created_at')->limit(5)->get();
 
             // Metrics - Use consistent query pattern with caching
-            $data['metrics'] = $this->getCachedMetrics($auth['user_id'], 'requestor', function() use ($auth, $statuses) {
+            $data['metrics'] = $this->getCachedMetrics($auth['user_id'], 'requestor', function () use ($auth, $statuses) {
                 return [
                     'my_total' => DB::table('purchase_orders as po')
-                        ->leftJoin('approvals as ap', function($join) {
+                        ->leftJoin('approvals as ap', function ($join) {
                             $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                                 ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                                ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                         })
                         ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                         ->where('po.requestor_id', $auth['user_id'])
                         ->whereNotNull('st.status_name')->count(),
                     'my_verified' => DB::table('purchase_orders as po')
-                        ->leftJoin('approvals as ap', function($join) {
+                        ->leftJoin('approvals as ap', function ($join) {
                             $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                                 ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                                ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                         })
                         ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                         ->where('po.requestor_id', $auth['user_id'])
                         ->where('st.status_name', $statuses['verified'])
                         ->whereNotNull('st.status_name')->count(),
                     'my_approved' => DB::table('purchase_orders as po')
-                        ->leftJoin('approvals as ap', function($join) {
+                        ->leftJoin('approvals as ap', function ($join) {
                             $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                                 ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                                ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                         })
                         ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                         ->where('po.requestor_id', $auth['user_id'])
@@ -93,13 +95,63 @@ class DashboardController extends Controller
                         ->whereNotNull('st.status_name')->count(),
                 ];
             });
-        } 
-        elseif ($auth['role'] === $roles['superadmin']) {
+
+            $data['statusOptions'] = DB::table('statuses')->orderBy('status_name')->get();
+
+            $poQuery = DB::table('purchase_orders as po')
+                ->leftJoin('suppliers as s', 's.supplier_id', '=', 'po.supplier_id')
+                ->leftJoin('approvals as ap', function ($join) {
+                    $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
+                        ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                })
+                ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
+                ->where('po.requestor_id', $auth['user_id'])
+                ->whereNotNull('st.status_name')
+                ->select([
+                    'po.purchase_order_id',
+                    'po.purchase_order_no',
+                    'po.date_requested',
+                    'po.created_at',
+                    'po.total',
+                    'st.status_name',
+                    'st.status_id',
+                    's.name as supplier_name',
+                ]);
+
+            if ($request->filled('po_date_from')) {
+                $poQuery->whereDate('po.date_requested', '>=', $request->get('po_date_from'));
+            }
+            if ($request->filled('po_date_to')) {
+                $poQuery->whereDate('po.date_requested', '<=', $request->get('po_date_to'));
+            }
+            if ($request->filled('po_status')) {
+                $poQuery->where('st.status_id', $request->get('po_status'));
+            }
+            if ($request->filled('po_min_total')) {
+                $poQuery->where('po.total', '>=', (float) $request->get('po_min_total'));
+            }
+            if ($request->filled('po_max_total')) {
+                $poQuery->where('po.total', '<=', (float) $request->get('po_max_total'));
+            }
+
+            $sortBy = (string) $request->get('po_sort_by', 'created_at');
+            $sortDir = strtolower((string) $request->get('po_sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            $allowedSortBy = ['created_at', 'date_requested', 'total', 'purchase_order_no'];
+            if (! in_array($sortBy, $allowedSortBy, true)) {
+                $sortBy = 'created_at';
+            }
+
+            $poQuery->orderBy('po.'.$sortBy, $sortDir);
+
+            $data['purchaseOrders'] = $poQuery
+                ->paginate(10, ['*'], 'po_page')
+                ->withQueryString();
+        } elseif ($auth['role'] === $roles['superadmin']) {
             // Superadmin gets system-wide overview
             $data['recentPOs'] = DB::table('purchase_orders as po')
-                ->leftJoin('approvals as ap', function($join) {
+                ->leftJoin('approvals as ap', function ($join) {
                     $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                         ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                        ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                 })
                 ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                 ->whereNotNull('st.status_name')
@@ -116,19 +168,19 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
 
-            $data['metrics'] = $this->getCachedMetrics($auth['user_id'], 'superadmin', function() {
+            $data['metrics'] = $this->getCachedMetrics($auth['user_id'], 'superadmin', function () {
                 return [
                     'total_pos' => DB::table('purchase_orders as po')
-                        ->leftJoin('approvals as ap', function($join) {
+                        ->leftJoin('approvals as ap', function ($join) {
                             $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                                 ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                                ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                         })
                         ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                         ->whereNotNull('st.status_name')->count(),
                     'pending_pos' => DB::table('purchase_orders as po')
-                        ->leftJoin('approvals as ap', function($join) {
+                        ->leftJoin('approvals as ap', function ($join) {
                             $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                                 ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                                ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                         })
                         ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                         ->where('st.status_name', 'Pending')
@@ -140,7 +192,7 @@ class DashboardController extends Controller
 
             // Provide system performance metrics used by the overview tab
             try {
-                $monitor = new SystemMonitoringService();
+                $monitor = new SystemMonitoringService;
                 $data['systemMetrics'] = $monitor->getSystemMetrics();
             } catch (\Throwable $e) {
                 $data['systemMetrics'] = [];
@@ -148,11 +200,26 @@ class DashboardController extends Controller
         }
 
         // Choose the correct Blade view for this role
-        return match ($auth['role']) {
-            'requestor' => view('dashboards.requestor', $data),
-            'superadmin' => view('dashboards.superadmin', $data),
-            default => view('dashboard', ['auth' => $auth]),
+        $viewName = match ($auth['role']) {
+            'requestor' => 'dashboards.requestor',
+            'superadmin' => view()->exists('dashboards.superadmin') ? 'dashboards.superadmin' : 'superadmin.dashboard',
+            default => 'dashboard',
         };
+
+        if (! view()->exists($viewName)) {
+            $fallback = 'dashboard';
+            Log::warning('Dashboard view missing, using fallback', [
+                'role' => $auth['role'],
+                'view' => $viewName,
+                'fallback' => $fallback,
+            ]);
+
+            return view($fallback, array_merge($data, [
+                'dashboard_view_error' => "Dashboard view missing: {$viewName}",
+            ]));
+        }
+
+        return view($viewName, $viewName === 'dashboard' ? ['auth' => $auth] : $data);
     }
 
     /**
@@ -161,42 +228,44 @@ class DashboardController extends Controller
     public function summary(Request $request)
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth) return response()->json(['error' => 'unauthenticated'], 401);
+        if (! $auth) {
+            return response()->json(['error' => 'unauthenticated'], 401);
+        }
 
         $payload = ['role' => $auth['role']];
 
         if ($auth['role'] === 'requestor') {
             $payload['metrics'] = [
                 'my_total' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->where('po.requestor_id', $auth['user_id'])
                     ->whereNotNull('st.status_name')->count(),
                 'my_drafts' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->where('po.requestor_id', $auth['user_id'])
                     ->where('st.status_name', 'Pending')
                     ->whereNotNull('st.status_name')->count(),
                 'my_verified' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->where('po.requestor_id', $auth['user_id'])
                     ->where('st.status_name', 'Verified')
                     ->whereNotNull('st.status_name')->count(),
                 'my_approved' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->where('po.requestor_id', $auth['user_id'])
@@ -204,9 +273,9 @@ class DashboardController extends Controller
                     ->whereNotNull('st.status_name')->count(),
             ];
             $payload['drafts'] = DB::table('purchase_orders as po')
-                ->leftJoin('approvals as ap', function($join) {
+                ->leftJoin('approvals as ap', function ($join) {
                     $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                         ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                        ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                 })
                 ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                 ->where('po.requestor_id', $auth['user_id'])
@@ -214,23 +283,23 @@ class DashboardController extends Controller
                 ->whereNotNull('st.status_name')
                 ->orderByDesc('po.created_at')
                 ->limit(5)
-                ->select('po.purchase_order_no','po.purpose','po.total','st.status_name')
+                ->select('po.purchase_order_no', 'po.purpose', 'po.total', 'st.status_name')
                 ->get();
         }
 
         if ($auth['role'] === 'superadmin') {
             $payload['metrics'] = [
                 'total_pos' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->whereNotNull('st.status_name')->count(),
                 'pending_pos' => DB::table('purchase_orders as po')
-                    ->leftJoin('approvals as ap', function($join) {
+                    ->leftJoin('approvals as ap', function ($join) {
                         $join->on('ap.purchase_order_id', '=', 'po.purchase_order_id')
-                             ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
+                            ->whereRaw('ap.prepared_at = (SELECT MAX(prepared_at) FROM approvals WHERE purchase_order_id = po.purchase_order_id)');
                     })
                     ->leftJoin('statuses as st', 'st.status_id', '=', 'ap.status_id')
                     ->where('st.status_name', 'Pending')
@@ -243,5 +312,3 @@ class DashboardController extends Controller
         return response()->json($payload);
     }
 }
-
-

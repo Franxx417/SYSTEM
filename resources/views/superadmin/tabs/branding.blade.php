@@ -7,9 +7,6 @@
                 <h6 class="mb-0">
                     <i class="fas fa-palette me-2"></i>Branding & UI Customization
                 </h6>
-                <span class="badge bg-primary" id="unsaved-changes" style="display: none;">
-                    <i class="fas fa-exclamation-circle me-1"></i>Unsaved Changes
-                </span>
             </div>
             <div class="card-body">
                 {{-- Alerts --}}
@@ -37,7 +34,7 @@
                     </div>
                 @endif
 
-                <form id="branding-form" action="{{ route('superadmin.branding') }}" method="POST" enctype="multipart/form-data">
+                <form id="branding-form" data-branding-js="1" action="{{ route('superadmin.branding') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     
                     {{-- Application Info Section --}}
@@ -64,20 +61,8 @@
                                 <div id="app_name_help" class="form-text">This appears in the sidebar and page titles</div>
                                 <div class="invalid-feedback">Please provide an application name.</div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="app_tagline" class="form-label">Tagline</label>
-                                <input 
-                                    type="text" 
-                                    class="form-control" 
-                                    id="app_tagline" 
-                                    name="app_tagline" 
-                                    value="{{ old('app_tagline', $settings['app.tagline'] ?? '') }}" 
-                                    maxlength="150"
-                                    aria-describedby="app_tagline_help"
-                                />
-                                <div id="app_tagline_help" class="form-text">Short tagline or slogan</div>
-                            </div>
                         </div>
+                        <input type="hidden" name="app_tagline" value="{{ old('app_tagline', $settings['app.tagline'] ?? '') }}" />
                         <div class="mb-3">
                             <label for="app_description" class="form-label">Application Description</label>
                             <textarea 
@@ -103,40 +88,8 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <label class="form-label">Logo Upload</label>
-                                <div 
-                                    class="logo-upload-area" 
-                                    id="logo-drop-zone"
-                                    role="button"
-                                    tabindex="0"
-                                    aria-label="Upload logo file"
-                                >
-                                    <div id="logo-upload-prompt">
-                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                        <p class="mb-1">Click to upload or drag and drop</p>
-                                        <small class="text-muted">PNG, JPG, SVG (Max: 2MB, Recommended: 200x50px)</small>
-                                    </div>
-                                    <div id="logo-preview-container" style="display: none;">
-                                        <img id="logo-preview" src="" alt="Logo preview" class="img-fluid mb-2" style="max-height: 150px;">
-                                        <div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" id="remove-logo-btn">
-                                                <i class="fas fa-trash me-1"></i>Remove
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input 
-                                    type="file" 
-                                    class="d-none" 
-                                    id="logo" 
-                                    name="logo" 
-                                    accept=".png,.jpg,.jpeg,.svg"
-                                    aria-label="Logo file input"
-                                />
-                                <div class="invalid-feedback" id="logo-error"></div>
-                                
                                 @if(!empty($settings['branding.logo_path']))
-                                    <div class="mt-3 text-center" id="current-logo-section">
+                                    <div class="text-center" id="current-logo-section">
                                         <div class="mb-2"><strong>Current Logo:</strong></div>
                                         <img 
                                             src="{{ $settings['branding.logo_path'] }}" 
@@ -145,275 +98,40 @@
                                             style="max-height: 100px;"
                                         />
                                     </div>
+                                @else
+                                    <div class="text-muted">No logo uploaded yet.</div>
                                 @endif
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Logo Positioning</label>
-                                <div class="mb-3">
-                                    <label for="logo_position" class="form-label small">Position</label>
-                                    <select class="form-select" id="logo_position" name="logo_position">
-                                        <option value="left" {{ ($settings['branding.logo_position'] ?? 'left') === 'left' ? 'selected' : '' }}>Left</option>
-                                        <option value="center" {{ ($settings['branding.logo_position'] ?? 'left') === 'center' ? 'selected' : '' }}>Center</option>
-                                        <option value="right" {{ ($settings['branding.logo_position'] ?? 'left') === 'right' ? 'selected' : '' }}>Right</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="logo_size" class="form-label small">Size (Height)</label>
-                                    <div class="input-group">
+
+                                @if(session('auth_user') && session('auth_user.role') === 'superadmin')
+                                    <div class="mt-3">
+                                        <label class="form-label">Logo Upload</label>
+                                        <div 
+                                            class="logo-upload-area" 
+                                            id="logo-drop-zone"
+                                            role="button"
+                                            tabindex="0"
+                                            aria-label="Upload logo file"
+                                        >
+                                            <div id="logo-upload-prompt">
+                                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                                <p class="mb-1">Click to upload or drag and drop</p>
+                                                <small class="text-muted">PNG, JPG, SVG (Max: 2MB, Recommended: 200x50px)</small>
+                                            </div>
+                                            <div id="logo-preview-container" style="display: none;">
+                                                <img id="logo-preview" src="" alt="Logo preview" class="img-fluid mb-2" style="max-height: 150px;">
+                                            </div>
+                                        </div>
                                         <input 
-                                            type="range" 
-                                            class="form-range" 
-                                            id="logo_size" 
-                                            name="logo_size" 
-                                            min="30" 
-                                            max="100" 
-                                            value="{{ $settings['branding.logo_size'] ?? 50 }}"
-                                            aria-label="Logo size"
+                                            type="file" 
+                                            class="d-none" 
+                                            id="logo" 
+                                            name="logo" 
+                                            accept=".png,.jpg,.jpeg,.svg"
+                                            aria-label="Logo file input"
                                         />
-                                        <span class="input-group-text" id="logo_size_value">{{ $settings['branding.logo_size'] ?? 50 }}px</span>
+                                        <div class="invalid-feedback" id="logo-error"></div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    {{-- Color Scheme Section --}}
-                    <div class="mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-fill-drip me-2"></i>Color Scheme
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="primary_color" class="form-label">Primary Color</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="color" 
-                                        class="form-control form-control-color" 
-                                        id="primary_color" 
-                                        name="primary_color" 
-                                        value="{{ old('primary_color', $settings['branding.primary_color'] ?? '#0d6efd') }}"
-                                        aria-label="Primary color picker"
-                                    />
-                                    <input 
-                                        type="text" 
-                                        class="form-control" 
-                                        id="primary_color_hex" 
-                                        value="{{ old('primary_color', $settings['branding.primary_color'] ?? '#0d6efd') }}"
-                                        pattern="^#[0-9A-Fa-f]{6}$"
-                                        maxlength="7"
-                                        aria-label="Primary color hex value"
-                                    />
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="secondary_color" class="form-label">Secondary Color</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="color" 
-                                        class="form-control form-control-color" 
-                                        id="secondary_color" 
-                                        name="secondary_color" 
-                                        value="{{ old('secondary_color', $settings['branding.secondary_color'] ?? '#6c757d') }}"
-                                        aria-label="Secondary color picker"
-                                    />
-                                    <input 
-                                        type="text" 
-                                        class="form-control" 
-                                        id="secondary_color_hex" 
-                                        value="{{ old('secondary_color', $settings['branding.secondary_color'] ?? '#6c757d') }}"
-                                        pattern="^#[0-9A-Fa-f]{6}$"
-                                        maxlength="7"
-                                        aria-label="Secondary color hex value"
-                                    />
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="accent_color" class="form-label">Accent Color</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="color" 
-                                        class="form-control form-control-color" 
-                                        id="accent_color" 
-                                        name="accent_color" 
-                                        value="{{ old('accent_color', $settings['branding.accent_color'] ?? '#198754') }}"
-                                        aria-label="Accent color picker"
-                                    />
-                                    <input 
-                                        type="text" 
-                                        class="form-control" 
-                                        id="accent_color_hex" 
-                                        value="{{ old('accent_color', $settings['branding.accent_color'] ?? '#198754') }}"
-                                        pattern="^#[0-9A-Fa-f]{6}$"
-                                        maxlength="7"
-                                        aria-label="Accent color hex value"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-lightbulb me-2"></i>
-                            <small>Colors will be applied to buttons, links, and UI elements throughout the application.</small>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    {{-- Typography Section --}}
-                    <div class="mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-font me-2"></i>Typography
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="font_family" class="form-label">Font Family</label>
-                                <select class="form-select" id="font_family" name="font_family" aria-label="Font family selection">
-                                    @php
-                                        $currentFont = $settings['branding.font_family'] ?? 'system-ui';
-                                        $fonts = [
-                                            'system-ui' => 'System UI (Default)',
-                                            'Inter' => 'Inter',
-                                            'Roboto' => 'Roboto',
-                                            'Open Sans' => 'Open Sans',
-                                            'Lato' => 'Lato',
-                                            'Montserrat' => 'Montserrat',
-                                            'Poppins' => 'Poppins',
-                                            'Arial' => 'Arial',
-                                            'Helvetica' => 'Helvetica',
-                                            'Georgia' => 'Georgia',
-                                            'Times New Roman' => 'Times New Roman'
-                                        ];
-                                    @endphp
-                                    @foreach($fonts as $value => $label)
-                                        <option value="{{ $value }}" {{ $currentFont === $value ? 'selected' : '' }}>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="font_size" class="form-label">Base Font Size</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="range" 
-                                        class="form-range" 
-                                        id="font_size" 
-                                        name="font_size" 
-                                        min="12" 
-                                        max="18" 
-                                        step="0.5"
-                                        value="{{ $settings['branding.font_size'] ?? 14 }}"
-                                        aria-label="Font size"
-                                    />
-                                    <span class="input-group-text" id="font_size_value">{{ $settings['branding.font_size'] ?? 14 }}px</span>
-                                </div>
-                                <small class="text-muted">Recommended: 14-16px for optimal readability</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    {{-- Theme & Layout Section --}}
-                    <div class="mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-paint-brush me-2"></i>Theme & Layout
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="theme_mode" class="form-label">Theme Mode</label>
-                                <select class="form-select" id="theme_mode" name="theme_mode" aria-label="Theme mode selection">
-                                    <option value="light" {{ ($settings['branding.theme_mode'] ?? 'light') === 'light' ? 'selected' : '' }}>Light</option>
-                                    <option value="dark" {{ ($settings['branding.theme_mode'] ?? 'light') === 'dark' ? 'selected' : '' }}>Dark</option>
-                                    <option value="auto" {{ ($settings['branding.theme_mode'] ?? 'light') === 'auto' ? 'selected' : '' }}>Auto (System)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="sidebar_position" class="form-label">Sidebar Position</label>
-                                <select class="form-select" id="sidebar_position" name="sidebar_position" aria-label="Sidebar position">
-                                    <option value="left" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'left' ? 'selected' : '' }}>Left</option>
-                                    <option value="right" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'right' ? 'selected' : '' }}>Right</option>
-                                    <option value="top" {{ ($settings['branding.sidebar_position'] ?? 'left') === 'top' ? 'selected' : '' }}>Top (Horizontal)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    {{-- Button Styling Section --}}
-                    <div class="mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-square me-2"></i>Button Styling
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="button_radius" class="form-label">Border Radius</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="range" 
-                                        class="form-range" 
-                                        id="button_radius" 
-                                        name="button_radius" 
-                                        min="0" 
-                                        max="20" 
-                                        step="1"
-                                        value="{{ $settings['branding.button_radius'] ?? 4 }}"
-                                        aria-label="Button border radius"
-                                    />
-                                    <span class="input-group-text" id="button_radius_value">{{ $settings['branding.button_radius'] ?? 4 }}px</span>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="button_padding" class="form-label">Padding</label>
-                                <div class="input-group">
-                                    <input 
-                                        type="range" 
-                                        class="form-range" 
-                                        id="button_padding" 
-                                        name="button_padding" 
-                                        min="4" 
-                                        max="16" 
-                                        step="1"
-                                        value="{{ $settings['branding.button_padding'] ?? 8 }}"
-                                        aria-label="Button padding"
-                                    />
-                                    <span class="input-group-text" id="button_padding_value">{{ $settings['branding.button_padding'] ?? 8 }}px</span>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="button_shadow" class="form-label">Shadow</label>
-                                <select class="form-select" id="button_shadow" name="button_shadow" aria-label="Button shadow">
-                                    <option value="none" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'none' ? 'selected' : '' }}>None</option>
-                                    <option value="sm" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'sm' ? 'selected' : '' }}>Small</option>
-                                    <option value="md" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'md' ? 'selected' : '' }}>Medium</option>
-                                    <option value="lg" {{ ($settings['branding.button_shadow'] ?? 'sm') === 'lg' ? 'selected' : '' }}>Large</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    {{-- Custom CSS Section --}}
-                    <div class="mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-code me-2"></i>Custom CSS
-                        </h6>
-                        <div class="mb-3">
-                            <label for="custom_css" class="form-label">Custom CSS Rules</label>
-                            <textarea 
-                                class="form-control font-monospace" 
-                                id="custom_css" 
-                                name="custom_css" 
-                                rows="8"
-                                maxlength="5000"
-                                placeholder="/* Add custom CSS rules here */&#10;.custom-class {&#10;  color: #333;&#10;}"
-                                aria-describedby="custom_css_help"
-                            >{{ old('custom_css', $settings['branding.custom_css'] ?? '') }}</textarea>
-                            <div id="custom_css_help" class="form-text">
-                                Advanced CSS customization. Max 5000 characters. <span id="css_count">0</span>/5000
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -441,78 +159,170 @@
             </div>
         </div>
     </div>
-
-    {{-- Live Preview Panel --}}
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
-            <div class="card-header bg-white">
-                <h6 class="mb-0">
-                    <i class="fas fa-eye me-2"></i>Live Preview
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="preview-container" id="preview-container">
-                    {{-- Preview Header --}}
-                    <div class="preview-header mb-3 p-3 rounded" id="preview-header" style="background-color: #f8f9fa;">
-                        <div class="d-flex align-items-center" id="preview-logo-container" style="justify-content: left;">
-                            <img 
-                                id="preview-logo" 
-                                src="{{ $settings['branding.logo_path'] ?? asset('images/default-logo.svg') }}" 
-                                alt="Logo Preview" 
-                                style="height: 50px; display: {{ !empty($settings['branding.logo_path']) ? 'block' : 'none' }};"
-                            />
-                            <div class="ms-3">
-                                <h5 class="mb-0" id="preview-app-name">{{ $settings['app.name'] ?? 'Procurement System' }}</h5>
-                                <small class="text-muted" id="preview-app-tagline">{{ $settings['app.tagline'] ?? '' }}</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Preview Typography --}}
-                    <div class="mb-3">
-                        <div class="preview-text" id="preview-text">
-                            <p class="mb-2">
-                                This is sample body text using the selected font family and size. The quick brown fox jumps over the lazy dog.
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- Preview Buttons --}}
-                    <div class="mb-3">
-                        <h6 class="mb-2 small text-muted">Button Styles</h6>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button class="btn btn-sm" id="preview-btn-primary">Primary</button>
-                            <button class="btn btn-sm" id="preview-btn-secondary">Secondary</button>
-                            <button class="btn btn-sm" id="preview-btn-accent">Accent</button>
-                        </div>
-                    </div>
-
-                    {{-- Preview Links --}}
-                    <div class="mb-3">
-                        <h6 class="mb-2 small text-muted">Link Styles</h6>
-                        <a href="#" id="preview-link" class="d-block mb-1">Sample hyperlink</a>
-                    </div>
-
-                    {{-- Preview Alert --}}
-                    <div class="alert alert-sm mb-0" id="preview-alert" role="alert">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Sample alert with accent color
-                    </div>
-                </div>
-
-                <div class="mt-3 pt-3 border-top">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Preview updates in real-time as you make changes
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 @push('scripts')
-    @vite(['resources/js/pages/branding.js'])
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('branding-form');
+            if (!form) return;
+            if (form.dataset.brandingInlineBound === '1') return;
+            form.dataset.brandingInlineBound = '1';
+
+            const logoInput = document.getElementById('logo');
+            const logoDropZone = document.getElementById('logo-drop-zone');
+            const logoPreview = document.getElementById('logo-preview');
+            const logoPreviewContainer = document.getElementById('logo-preview-container');
+            const logoUploadPrompt = document.getElementById('logo-upload-prompt');
+            const appName = document.getElementById('app_name');
+            const appDescription = document.getElementById('app_description');
+
+            const errorDiv = document.getElementById('logo-error');
+            function showError(message) {
+                if (!errorDiv) return;
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => { errorDiv.style.display = 'none'; }, 6000);
+            }
+
+            function showToast(type, message) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 520px;';
+                alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+                document.body.appendChild(alertDiv);
+                setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 6000);
+            }
+
+            function handleLogoFile(file) {
+                if (!file) return;
+
+                const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+                if (file.type && !validTypes.includes(file.type)) {
+                    showError('Please upload a PNG, JPG, SVG, or WEBP file.');
+                    return;
+                }
+                const maxSize = 2 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showError('File size must be less than 2MB.');
+                    return;
+                }
+
+                if (logoInput) {
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        logoInput.files = dt.files;
+                    } catch (_) {}
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    if (logoPreview && logoPreviewContainer && logoUploadPrompt) {
+                        logoPreview.src = e.target.result;
+                        logoPreviewContainer.style.display = 'block';
+                        logoUploadPrompt.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+
+            if (logoInput && logoDropZone) {
+                logoDropZone.addEventListener('click', function (e) {
+                    logoInput.click();
+                });
+
+                logoDropZone.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        logoInput.click();
+                    }
+                });
+
+                logoInput.addEventListener('change', function (e) {
+                    handleLogoFile(e.target.files[0]);
+                });
+
+                logoDropZone.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.add('drag-over');
+                });
+
+                logoDropZone.addEventListener('dragleave', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.remove('drag-over');
+                });
+
+                logoDropZone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.classList.remove('drag-over');
+                    const files = e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        handleLogoFile(files[0]);
+                    }
+                });
+            }
+
+            const resetBtn = document.getElementById('reset-btn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function () {
+                    form.reset();
+                    location.reload();
+                });
+            }
+
+            const saveBtn = document.getElementById('save-btn');
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (appName && !appName.value.trim()) {
+                    appName.classList.add('is-invalid');
+                    return;
+                }
+
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+                }
+
+                try {
+                    const formData = new FormData(form);
+                    const resp = await fetch('/api/superadmin/branding/update', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+
+                    const data = await resp.json().catch(() => null);
+                    if (!resp.ok) {
+                        const msg = data && (data.error || data.message) ? (data.error || data.message) : `HTTP ${resp.status}`;
+                        showToast('danger', `Failed to update branding: ${msg}`);
+                        return;
+                    }
+
+                    if (!data || !data.success) {
+                        showToast('danger', (data && data.error) ? data.error : 'Failed to update branding');
+                        return;
+                    }
+
+                    showToast('success', data.message || 'Branding updated successfully');
+                    setTimeout(() => location.reload(), 600);
+                } catch (err) {
+                    showToast('danger', 'Failed to update branding: ' + (err && err.message ? err.message : 'Unknown error'));
+                } finally {
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Branding';
+                    }
+                }
+            });
+        });
+    </script>
 @endpush
 
 @push('styles')

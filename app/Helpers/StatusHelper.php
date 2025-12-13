@@ -51,16 +51,16 @@ class StatusHelper
     {
         $config = self::getStatusColor($statusName);
         $cssClass = $config['css_class'] ?? 'status-secondary';
-        
+
         $defaultAttributes = [
             'class' => "status-indicator {$cssClass}",
             'style' => "background-color: {$config['color']}",
-            'title' => $config['description'] ?? $statusName
+            'title' => $config['description'] ?? $statusName,
         ];
-        
+
         $mergedAttributes = array_merge($defaultAttributes, $attributes);
         $attributeString = self::buildAttributeString($mergedAttributes);
-        
+
         return "<span{$attributeString}></span>";
     }
 
@@ -70,15 +70,15 @@ class StatusHelper
     public static function statusBadge(string $statusName, array $attributes = []): string
     {
         $config = self::getStatusColor($statusName);
-        
+
         $defaultAttributes = [
             'class' => 'badge status-badge',
-            'style' => "background-color: {$config['color']}; color: {$config['text_color']}"
+            'style' => "background-color: {$config['color']}; color: {$config['text_color']}",
         ];
-        
+
         $mergedAttributes = array_merge($defaultAttributes, $attributes);
         $attributeString = self::buildAttributeString($mergedAttributes);
-        
+
         return "<span{$attributeString}>{$statusName}</span>";
     }
 
@@ -89,10 +89,10 @@ class StatusHelper
     {
         $parts = [];
         foreach ($attributes as $key => $value) {
-            $parts[] = $key . '="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"';
+            $parts[] = $key.'="'.htmlspecialchars($value, ENT_QUOTES, 'UTF-8').'"';
         }
-        
-        return empty($parts) ? '' : ' ' . implode(' ', $parts);
+
+        return empty($parts) ? '' : ' '.implode(' ', $parts);
     }
 
     /**
@@ -109,6 +109,7 @@ class StatusHelper
     public static function statusExists(string $statusName): bool
     {
         $colors = self::getAllStatusColors();
+
         return isset($colors[$statusName]);
     }
 
@@ -118,6 +119,7 @@ class StatusHelper
     public static function getStatusOrder(): array
     {
         $config = self::getStatusManager()->getConfig();
+
         return $config['status_order'] ?? [];
     }
 
@@ -127,6 +129,7 @@ class StatusHelper
     public static function getDefaultStatus(): string
     {
         $config = self::getStatusManager()->getConfig();
+
         return $config['default_status'] ?? 'Pending';
     }
 }

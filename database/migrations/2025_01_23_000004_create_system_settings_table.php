@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('system_settings')) {
+        if (! Schema::hasTable('system_settings')) {
             Schema::create('system_settings', function (Blueprint $table) {
                 $table->uuid('id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->string('category', 50); // user_management, security, notifications, performance, etc.
@@ -24,7 +24,7 @@ return new class extends Migration
                 $table->uuid('updated_by')->nullable();
                 $table->dateTime('created_at')->default(DB::raw('GETDATE()'));
                 $table->dateTime('updated_at')->default(DB::raw('GETDATE()'));
-                
+
                 // Indexes
                 $table->unique(['category', 'key']);
                 $table->index('category');

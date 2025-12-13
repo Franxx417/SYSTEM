@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Auth\AuthenticateUserAction;
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Handles user authentication using the custom login table.
@@ -14,6 +12,10 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AuthenticateUserAction $authenticateUser
+    ) {}
+
     /**
      * Show the login page
      */
@@ -25,36 +27,16 @@ class AuthController extends Controller
     /**
      * Process login form and create a simple session payload
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ]);
-
-        $row = DB::table('login')
-            ->join('users', 'login.user_id', '=', 'users.user_id')
-            ->leftJoin('roles', 'roles.user_id', '=', 'users.user_id')
-            ->leftJoin('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
-            ->select('login.*', 'users.name', 'users.email', 'users.position', 'users.department', 'role_types.user_role_type')
-            ->where('login.username', $credentials['username'])
-            ->first();
-
-        if (!$row || !Hash::check($credentials['password'], $row->password)) {
-            throw ValidationException::withMessages([
-                'username' => 'The provided credentials are incorrect.',
-            ]);
-        }
+        $credentials = $request->validated();
+        $sessionPayload = $this->authenticateUser->handle(
+            $credentials['username'],
+            $credentials['password']
+        );
 
         // Store minimal user info in session (used for dashboards/guards)
-        $request->session()->put('auth_user', [
-            'user_id' => $row->user_id,
-            'name' => $row->name,
-            'email' => $row->email,
-            'position' => $row->position,
-            'department' => $row->department,
-            'role' => $row->user_role_type,
-        ]);
+        $request->session()->put('auth_user', $sessionPayload);
 
         return redirect()->route('dashboard');
     }
@@ -67,10 +49,7 @@ class AuthController extends Controller
         $request->session()->forget('auth_user');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }
-
-
-
-

@@ -1,1 +1,0 @@
-document.addEventListener("DOMContentLoaded",function(){const t=document.getElementById("quantity"),n=document.getElementById("unit_price"),o=document.getElementById("total_cost");function e(){const u=parseFloat(t.value)||0,a=parseFloat(n.value)||0,c=u*a;o.value=c.toFixed(2)}t&&n&&o&&(t.addEventListener("input",e),n.addEventListener("input",e),e())});

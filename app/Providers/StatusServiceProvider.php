@@ -2,10 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Blade;
 use App\Services\StatusConfigManager;
-use App\Helpers\StatusHelper;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\ServiceProvider;
 
 /**
  * Status Service Provider
@@ -19,7 +18,7 @@ class StatusServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(StatusConfigManager::class, function ($app) {
-            return new StatusConfigManager();
+            return new StatusConfigManager;
         });
     }
 
@@ -47,11 +46,12 @@ class StatusServiceProvider extends ServiceProvider
             'dashboards.*',
             'po.*',
             'partials.status-display',
-            'approvals.*'
+            'approvals.*',
         ], function ($view) {
             // Cache status colors for 1 hour to reduce database queries
             $statusColors = cache()->remember('status_colors', 3600, function () {
                 $statusManager = app(StatusConfigManager::class);
+
                 return $statusManager->getStatusColors();
             });
             $view->with('statusColors', $statusColors);
@@ -63,9 +63,10 @@ class StatusServiceProvider extends ServiceProvider
                 // Cache generated CSS for 24 hours
                 $css = cache()->remember('dynamic_status_css', 86400, function () {
                     $statusManager = app(StatusConfigManager::class);
+
                     return $statusManager->generateStatusCss();
                 });
-                
+
                 return response($css)
                     ->header('Content-Type', 'text/css')
                     ->header('Cache-Control', 'public, max-age=86400');

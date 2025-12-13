@@ -1,1 +1,0 @@
-document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll(".alert").forEach(e=>{setTimeout(()=>{e&&e.parentNode&&e.remove()},window.constants?.notifications?.auto_dismiss_delay||5e3)})});

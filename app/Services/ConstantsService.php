@@ -17,7 +17,7 @@ class ConstantsService
     public static function get(string $key, $default = null)
     {
         $cacheKey = "constant_{$key}";
-        
+
         return Cache::remember($cacheKey, config('constants.cache.settings_duration', 3600), function () use ($key, $default) {
             // Try database settings first
             if (Schema::hasTable('system_settings')) {
@@ -25,7 +25,7 @@ class ConstantsService
                     $dbValue = DB::table('system_settings')
                         ->where('key', $key)
                         ->value('value');
-                    
+
                     if ($dbValue !== null) {
                         return self::castValue($dbValue, $key);
                     }
@@ -33,20 +33,20 @@ class ConstantsService
                     // Ignore database errors, fall back to config
                 }
             }
-            
+
             // Try environment variable
             $envKey = strtoupper(str_replace('.', '_', $key));
             $envValue = env($envKey);
             if ($envValue !== null) {
                 return self::castValue($envValue, $key);
             }
-            
+
             // Try config constants
             $configValue = config("constants.{$key}");
             if ($configValue !== null) {
                 return $configValue;
             }
-            
+
             return $default;
         });
     }
@@ -57,7 +57,7 @@ class ConstantsService
     public static function set(string $key, $value, string $category = 'general'): bool
     {
         try {
-            if (!Schema::hasTable('system_settings')) {
+            if (! Schema::hasTable('system_settings')) {
                 return false;
             }
 
@@ -74,7 +74,7 @@ class ConstantsService
 
             // Clear cache
             Cache::forget("constant_{$key}");
-            
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -90,6 +90,7 @@ class ConstantsService
         foreach ($keys as $key) {
             $result[$key] = self::get($key);
         }
+
         return $result;
     }
 
@@ -99,9 +100,9 @@ class ConstantsService
     public static function getCategory(string $category): array
     {
         $cacheKey = "constants_category_{$category}";
-        
+
         return Cache::remember($cacheKey, config('constants.cache.settings_duration', 3600), function () use ($category) {
-            if (!Schema::hasTable('system_settings')) {
+            if (! Schema::hasTable('system_settings')) {
                 return [];
             }
 
@@ -234,19 +235,19 @@ class ConstantsService
         if (in_array($key, ['security.force_password_change', 'security.enable_2fa', 'app.maintenance_mode'])) {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         }
-        
+
         // Integer values
-        if (strpos($key, 'limit') !== false || strpos($key, 'timeout') !== false || 
+        if (strpos($key, 'limit') !== false || strpos($key, 'timeout') !== false ||
             strpos($key, 'duration') !== false || strpos($key, 'size') !== false ||
             strpos($key, 'attempts') !== false || strpos($key, 'threshold') !== false) {
             return (int) $value;
         }
-        
+
         // Float values
         if (strpos($key, 'percentage') !== false || strpos($key, 'ratio') !== false) {
             return (float) $value;
         }
-        
+
         return $value;
     }
 
@@ -264,11 +265,7 @@ class ConstantsService
         } elseif (is_array($value) || is_object($value)) {
             return 'json';
         }
-        
+
         return 'string';
     }
 }
-
-
-
-

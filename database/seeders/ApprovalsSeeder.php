@@ -11,7 +11,9 @@ class ApprovalsSeeder extends Seeder
     public function run(): void
     {
         $poId = DB::table('purchase_orders')->where('purchase_order_no', '1')->value('purchase_order_id');
-        if (!$poId) return;
+        if (! $poId) {
+            return;
+        }
 
         $preparedBy = DB::table('roles')
             ->join('role_types', 'roles.role_type_id', '=', 'role_types.role_type_id')
@@ -25,7 +27,7 @@ class ApprovalsSeeder extends Seeder
         $statusApproved = DB::table('statuses')->where('status_name', 'Approved')->value('status_id');
         $statusDraft = DB::table('statuses')->where('status_name', 'Pending')->value('status_id');
 
-        if (!DB::table('approvals')->where('purchase_order_id', $poId)->exists()) {
+        if (! DB::table('approvals')->where('purchase_order_id', $poId)->exists()) {
             DB::table('approvals')->insert([
                 'purchase_order_id' => $poId,
                 'prepared_by_id' => $preparedBy,
@@ -38,11 +40,3 @@ class ApprovalsSeeder extends Seeder
         }
     }
 }
-
-
-
-
-
-
-
-

@@ -18,11 +18,6 @@
                     <i class="fas fa-lock me-2"></i>Security
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab">
-                    <i class="fas fa-sliders-h me-2"></i>Preferences
-                </button>
-            </li>
             @if($auth && $auth['role'] !== 'superadmin')
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="appearance-tab" data-bs-toggle="tab" data-bs-target="#appearance" type="button" role="tab">
@@ -30,11 +25,6 @@
                 </button>
             </li>
             @endif
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
-                    <i class="fas fa-bell me-2"></i>Notifications
-                </button>
-            </li>
         </ul>
     </div>
 </div>
@@ -84,36 +74,7 @@
                 <h6 class="mb-0"><i class="fas fa-image me-2"></i>Company Logo</h6>
             </div>
             <div class="card-body">
-                @if($currentLogo)
-                    <div class="mb-3">
-                        <label class="form-label">Current Logo</label>
-                        <div class="d-flex align-items-center gap-3">
-                            <img src="{{ $currentLogo }}" alt="Company Logo" class="img-thumbnail" style="max-height: 80px; max-width: 200px;">
-                            <form method="POST" action="{{ route('settings.logo.remove') }}" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to remove the logo?')">
-                                    <i class="fas fa-trash me-1"></i>Remove Logo
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                @endif
-                
-                <form method="POST" action="{{ route('settings.logo.upload') }}" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label">{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}</label>
-                        <input type="file" class="form-control" name="logo" accept="image/*" required>
-                        <div class="form-text">
-                            Supported formats: JPEG, PNG, GIF, SVG, WebP. Maximum size: 2MB.<br>
-                            Recommended dimensions: 300x100px for optimal display on documents.
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload me-1"></i>{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}
-                    </button>
-                </form>
+                <div class="text-muted">Company logo management has been moved to the Branding page.</div>
             </div>
         </div>
 
@@ -270,90 +231,6 @@
     </div>
     <!-- End Security Tab -->
 
-    <!-- Preferences Tab -->
-    <div class="tab-pane fade" id="preferences" role="tabpanel">
-        <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-cog me-2"></i>General Preferences</h6>
-                    </div>
-                    <div class="card-body">
-                        <form id="preferencesForm">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label">Language</label>
-                                    <select class="form-select" name="language">
-                                        <option value="en">English (US)</option>
-                                        <option value="fil">Filipino</option>
-                                        <option value="zh">中文 (Chinese)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Date Format</label>
-                                    <select class="form-select" name="date_format">
-                                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Time Format</label>
-                                    <select class="form-select" name="time_format">
-                                        <option value="12">12-hour (AM/PM)</option>
-                                        <option value="24">24-hour</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Timezone</label>
-                                    <select class="form-select" name="timezone">
-                                        <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
-                                        <option value="Asia/Tokyo">Asia/Tokyo (GMT+9)</option>
-                                        <option value="UTC">UTC (GMT+0)</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <hr>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="autoSave" checked>
-                                        <label class="form-check-label" for="autoSave">
-                                            Auto-save drafts
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="compactView">
-                                        <label class="form-check-label" for="compactView">
-                                            Compact view for tables
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i>Save Preferences
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>About Preferences</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="mb-0 small text-muted">
-                            Customize how you interact with the system. Your preferences will be applied across all your devices.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- End Preferences Tab -->
 
     <!-- Appearance Tab -->
     @if($auth && $auth['role'] !== 'superadmin')
@@ -365,36 +242,7 @@
                         <h6 class="mb-0"><i class="fas fa-image me-2"></i>Company Logo</h6>
                     </div>
                     <div class="card-body">
-                        @if($currentLogo)
-                            <div class="mb-3">
-                                <label class="form-label">Current Logo</label>
-                                <div class="d-flex align-items-center gap-3">
-                                    <img src="{{ $currentLogo }}" alt="Company Logo" class="img-thumbnail" style="max-height: 80px; max-width: 200px;">
-                                    <form method="POST" action="{{ route('settings.logo.remove') }}" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to remove the logo?')">
-                                            <i class="fas fa-trash me-1"></i>Remove Logo
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        @endif
-                        
-                        <form method="POST" action="{{ route('settings.logo.upload') }}" enctype="multipart/form-data">
-                            @csrf
-                            <div class="mb-3">
-                                <label class="form-label">{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}</label>
-                                <input type="file" class="form-control" name="logo" accept="image/*" required>
-                                <div class="form-text">
-                                    Supported formats: JPEG, PNG, GIF, SVG, WebP. Maximum size: 2MB.<br>
-                                    Recommended dimensions: 300x100px for optimal display on documents.
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-upload me-1"></i>{{ $currentLogo ? 'Replace Logo' : 'Upload Logo' }}
-                            </button>
-                        </form>
+                        <div class="text-muted">Company logo management has been moved to the Branding page.</div>
                     </div>
                 </div>
             </div>
@@ -417,93 +265,6 @@
     @endif
     <!-- End Appearance Tab -->
 
-    <!-- Notifications Tab -->
-    <div class="tab-pane fade" id="notifications" role="tabpanel">
-        <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-bell me-2"></i>Notification Preferences</h6>
-                    </div>
-                    <div class="card-body">
-                        <form id="notificationsForm">
-                            <div class="mb-3">
-                                <h6>Purchase Orders</h6>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="notif_po_created" checked>
-                                    <label class="form-check-label" for="notif_po_created">
-                                        New purchase order created
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="notif_po_approved" checked>
-                                    <label class="form-check-label" for="notif_po_approved">
-                                        Purchase order approved
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="notif_po_rejected" checked>
-                                    <label class="form-check-label" for="notif_po_rejected">
-                                        Purchase order rejected
-                                    </label>
-                                </div>
-                            </div>
-                            <hr>
-                            <div class="mb-3">
-                                <h6>System Notifications</h6>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="notif_system_updates" checked>
-                                    <label class="form-check-label" for="notif_system_updates">
-                                        System updates and maintenance
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="notif_security">
-                                    <label class="form-check-label" for="notif_security">
-                                        Security alerts
-                                    </label>
-                                </div>
-                            </div>
-                            <hr>
-                            <div class="mb-3">
-                                <h6>Email Notifications</h6>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="email_daily_summary">
-                                    <label class="form-check-label" for="email_daily_summary">
-                                        Daily activity summary
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" id="email_weekly_report">
-                                    <label class="form-check-label" for="email_weekly_report">
-                                        Weekly reports
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i>Save Notification Settings
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Stay Informed</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="small text-muted mb-0">
-                            Configure which notifications you'd like to receive. You can always update these settings later.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- End Notifications Tab -->
 </div>
 
 <!-- Success/Error Messages -->
@@ -584,9 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-
-@vite(['resources/js/pages/settings.js'])
-
 <style>
 .nav-tabs {
     border-bottom: 2px solid #dee2e6;

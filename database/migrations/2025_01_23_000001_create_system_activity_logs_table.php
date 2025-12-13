@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('system_activity_logs')) {
+        if (! Schema::hasTable('system_activity_logs')) {
             Schema::create('system_activity_logs', function (Blueprint $table) {
                 $table->uuid('id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->uuid('user_id')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
                 $table->enum('severity', ['low', 'medium', 'high', 'critical'])->default('low');
                 $table->boolean('is_security_event')->default(false);
                 $table->dateTime('created_at')->default(DB::raw('GETDATE()'));
-                
+
                 // Indexes for performance
                 $table->index(['user_id', 'created_at']);
                 $table->index(['action', 'created_at']);

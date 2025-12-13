@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BrandingService
 {
@@ -13,7 +13,7 @@ class BrandingService
      * Cache duration for branding settings (in seconds)
      */
     const CACHE_DURATION = 3600; // 1 hour
-    
+
     /**
      * Default branding values
      */
@@ -30,7 +30,7 @@ class BrandingService
         'branding.font_family' => 'system-ui',
         'branding.font_size' => 14,
     ];
-    
+
     /**
      * Get all branding settings with caching
      */
@@ -38,32 +38,34 @@ class BrandingService
     {
         return Cache::remember('branding_settings', self::CACHE_DURATION, function () {
             try {
-                if (!Schema::hasTable('settings')) {
+                if (! Schema::hasTable('settings')) {
                     return self::DEFAULTS;
                 }
-                
+
                 $settings = DB::table('settings')
                     ->whereIn('key', array_keys(self::DEFAULTS))
                     ->pluck('value', 'key')
                     ->toArray();
-                
+
                 return array_merge(self::DEFAULTS, $settings);
             } catch (\Throwable $e) {
-                Log::warning('Failed to load branding settings: ' . $e->getMessage());
+                Log::warning('Failed to load branding settings: '.$e->getMessage());
+
                 return self::DEFAULTS;
             }
         });
     }
-    
+
     /**
      * Get a specific branding setting
      */
     public function get(string $key, $default = null)
     {
         $settings = $this->getAll();
+
         return $settings[$key] ?? $default ?? self::DEFAULTS[$key] ?? null;
     }
-    
+
     /**
      * Get application name
      */
@@ -71,7 +73,7 @@ class BrandingService
     {
         return $this->get('app.name');
     }
-    
+
     /**
      * Get application tagline
      */
@@ -79,7 +81,7 @@ class BrandingService
     {
         return $this->get('app.tagline') ?? '';
     }
-    
+
     /**
      * Get application description
      */
@@ -87,7 +89,7 @@ class BrandingService
     {
         return $this->get('app.description') ?? '';
     }
-    
+
     /**
      * Get logo path
      */
@@ -95,15 +97,15 @@ class BrandingService
     {
         return $this->get('branding.logo_path');
     }
-    
+
     /**
      * Check if logo exists
      */
     public function hasLogo(): bool
     {
-        return !empty($this->getLogoPath());
+        return ! empty($this->getLogoPath());
     }
-    
+
     /**
      * Get logo size (height in pixels)
      */
@@ -111,7 +113,7 @@ class BrandingService
     {
         return (int) $this->get('branding.logo_size');
     }
-    
+
     /**
      * Get logo position
      */
@@ -119,7 +121,7 @@ class BrandingService
     {
         return $this->get('branding.logo_position');
     }
-    
+
     /**
      * Get primary color
      */
@@ -127,7 +129,7 @@ class BrandingService
     {
         return $this->get('branding.primary_color');
     }
-    
+
     /**
      * Get secondary color
      */
@@ -135,7 +137,7 @@ class BrandingService
     {
         return $this->get('branding.secondary_color');
     }
-    
+
     /**
      * Get accent color
      */
@@ -143,7 +145,7 @@ class BrandingService
     {
         return $this->get('branding.accent_color');
     }
-    
+
     /**
      * Get font family
      */
@@ -151,7 +153,7 @@ class BrandingService
     {
         return $this->get('branding.font_family');
     }
-    
+
     /**
      * Get font size
      */
@@ -159,7 +161,7 @@ class BrandingService
     {
         return (float) $this->get('branding.font_size');
     }
-    
+
     /**
      * Get brand colors as array
      */
@@ -171,7 +173,7 @@ class BrandingService
             'accent' => $this->getAccentColor(),
         ];
     }
-    
+
     /**
      * Get typography settings
      */
@@ -182,7 +184,7 @@ class BrandingService
             'font_size' => $this->getFontSize(),
         ];
     }
-    
+
     /**
      * Generate dynamic CSS for branding
      */
@@ -193,27 +195,27 @@ class BrandingService
         $accent = $this->getAccentColor();
         $fontFamily = $this->getFontFamily();
         $fontSize = $this->getFontSize();
-        
+
         // Helper function to adjust color brightness
-        $adjustBrightness = function($hex, $steps) {
+        $adjustBrightness = function ($hex, $steps) {
             $hex = str_replace('#', '', $hex);
             $r = hexdec(substr($hex, 0, 2));
             $g = hexdec(substr($hex, 2, 2));
             $b = hexdec(substr($hex, 4, 2));
-            
+
             $r = max(0, min(255, $r + $steps));
             $g = max(0, min(255, $g + $steps));
             $b = max(0, min(255, $b + $steps));
-            
-            return '#' . str_pad(dechex($r), 2, '0', STR_PAD_LEFT) 
-                       . str_pad(dechex($g), 2, '0', STR_PAD_LEFT) 
-                       . str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
+
+            return '#'.str_pad(dechex($r), 2, '0', STR_PAD_LEFT)
+                       .str_pad(dechex($g), 2, '0', STR_PAD_LEFT)
+                       .str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
         };
-        
+
         $primaryDark = $adjustBrightness($primary, -20);
         $primaryLight = $adjustBrightness($primary, 20);
         $accentDark = $adjustBrightness($accent, -20);
-        
+
         return <<<CSS
 /* Dynamic Branding Styles */
 :root {
@@ -364,7 +366,7 @@ a:hover {
 
 CSS;
     }
-    
+
     /**
      * Clear branding cache
      */
@@ -372,7 +374,7 @@ CSS;
     {
         Cache::forget('branding_settings');
     }
-    
+
     /**
      * Update multiple branding settings
      */
@@ -386,19 +388,52 @@ CSS;
                 );
             }
         }
-        
+
         $this->clearCache();
     }
-    
+
     /**
      * Get print-friendly branding data
      */
     public function getPrintData(): array
     {
+        $logoPath = $this->getLogoPath();
+        $logoSrc = null;
+        if (! empty($logoPath)) {
+            if (preg_match('~^https?://~i', $logoPath)) {
+                $logoSrc = $logoPath;
+            } else {
+                $relative = ltrim($logoPath, '/');
+                $absolute = public_path($relative);
+
+                if (is_file($absolute) && is_readable($absolute)) {
+                    $data = @file_get_contents($absolute);
+                    if ($data !== false) {
+                        $ext = strtolower(pathinfo($absolute, PATHINFO_EXTENSION));
+                        $mime = match ($ext) {
+                            'svg' => 'image/svg+xml',
+                            'png' => 'image/png',
+                            'jpg', 'jpeg' => 'image/jpeg',
+                            'webp' => 'image/webp',
+                            default => null,
+                        };
+
+                        if ($mime && strlen($data) <= 1024 * 1024) {
+                            $logoSrc = 'data:'.$mime.';base64,'.base64_encode($data);
+                        } else {
+                            $logoSrc = asset($relative);
+                        }
+                    }
+                }
+            }
+        }
+
         return [
             'company_name' => $this->getAppName(),
-            'company_logo' => $this->getLogoPath(),
+            'company_logo' => $logoSrc,
             'company_tagline' => $this->getAppTagline(),
+            'logo_position' => $this->getLogoPosition(),
+            'logo_size' => $this->getLogoSize(),
             'primary_color' => $this->getPrimaryColor(),
             'accent_color' => $this->getAccentColor(),
             'font_family' => $this->getFontFamily(),

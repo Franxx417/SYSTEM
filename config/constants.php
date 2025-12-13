@@ -152,7 +152,3 @@ return [
         'retention_days' => env('LOG_RETENTION_DAYS', 30),
     ],
 ];
-
-
-
-

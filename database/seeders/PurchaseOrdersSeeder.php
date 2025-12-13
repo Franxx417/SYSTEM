@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 
 /** Seed sample purchase orders and items to enable dashboards/suggestions */
 class PurchaseOrdersSeeder extends Seeder
@@ -17,12 +16,12 @@ class PurchaseOrdersSeeder extends Seeder
             ->where('role_types.user_role_type', 'requestor')
             ->value('roles.user_id');
         $supplierId = DB::table('suppliers')->value('supplier_id');
-        if (!$requestorUserId || !$supplierId) {
+        if (! $requestorUserId || ! $supplierId) {
             return;
         }
 
         $existing = DB::table('purchase_orders')->where('purchase_order_no', '1')->first();
-        if (!$existing) {
+        if (! $existing) {
             DB::table('purchase_orders')->insert([
                 'requestor_id' => $requestorUserId,
                 'supplier_id' => $supplierId,
@@ -41,7 +40,7 @@ class PurchaseOrdersSeeder extends Seeder
         $poId = DB::table('purchase_orders')->where('purchase_order_no', '1')->value('purchase_order_id');
 
         // Create approval record for PO 1
-        if ($poId && !DB::table('approvals')->where('purchase_order_id', $poId)->exists()) {
+        if ($poId && ! DB::table('approvals')->where('purchase_order_id', $poId)->exists()) {
             $statusPending = DB::table('statuses')->where('status_name', 'Pending')->value('status_id');
             if ($statusPending) {
                 DB::table('approvals')->insert([
@@ -57,7 +56,7 @@ class PurchaseOrdersSeeder extends Seeder
 
         // Items
         if ($poId) {
-            if (!DB::table('items')->where('purchase_order_id', $poId)->exists()) {
+            if (! DB::table('items')->where('purchase_order_id', $poId)->exists()) {
                 DB::table('items')->insert([
                     [
                         'purchase_order_id' => $poId,
@@ -79,7 +78,7 @@ class PurchaseOrdersSeeder extends Seeder
 
         // Additional historical orders to enrich suggestions/frequency
         $existing2 = DB::table('purchase_orders')->where('purchase_order_no', '2')->first();
-        if (!$existing2) {
+        if (! $existing2) {
             DB::table('purchase_orders')->insert([
                 'requestor_id' => $requestorUserId,
                 'supplier_id' => $supplierId,
@@ -93,10 +92,10 @@ class PurchaseOrdersSeeder extends Seeder
                 'subtotal' => 109800.00,
                 'total' => 109800.00 * 1.12,
             ]);
-            $po2 = DB::table('purchase_orders')->where('purchase_order_no','2')->value('purchase_order_id');
-            
+            $po2 = DB::table('purchase_orders')->where('purchase_order_no', '2')->value('purchase_order_id');
+
             // Create approval record for PO 2
-            if ($po2 && !DB::table('approvals')->where('purchase_order_id', $po2)->exists()) {
+            if ($po2 && ! DB::table('approvals')->where('purchase_order_id', $po2)->exists()) {
                 $statusPending = DB::table('statuses')->where('status_name', 'Pending')->value('status_id');
                 if ($statusPending) {
                     DB::table('approvals')->insert([
@@ -109,7 +108,7 @@ class PurchaseOrdersSeeder extends Seeder
                     ]);
                 }
             }
-            
+
             DB::table('items')->insert([
                 [
                     'purchase_order_id' => $po2,
@@ -124,7 +123,7 @@ class PurchaseOrdersSeeder extends Seeder
         $supplier2 = DB::table('suppliers')->where('name', 'OfficeHub Trading')->value('supplier_id');
         if ($supplier2) {
             $existing3 = DB::table('purchase_orders')->where('purchase_order_no', '3')->first();
-            if (!$existing3) {
+            if (! $existing3) {
                 DB::table('purchase_orders')->insert([
                     'requestor_id' => $requestorUserId,
                     'supplier_id' => $supplier2,
@@ -138,10 +137,10 @@ class PurchaseOrdersSeeder extends Seeder
                     'subtotal' => 45000.00,
                     'total' => 50400.00,
                 ]);
-                $po3 = DB::table('purchase_orders')->where('purchase_order_no','3')->value('purchase_order_id');
-                
+                $po3 = DB::table('purchase_orders')->where('purchase_order_no', '3')->value('purchase_order_id');
+
                 // Create approval record for PO 3
-                if ($po3 && !DB::table('approvals')->where('purchase_order_id', $po3)->exists()) {
+                if ($po3 && ! DB::table('approvals')->where('purchase_order_id', $po3)->exists()) {
                     $statusPending = DB::table('statuses')->where('status_name', 'Pending')->value('status_id');
                     if ($statusPending) {
                         DB::table('approvals')->insert([
@@ -154,7 +153,7 @@ class PurchaseOrdersSeeder extends Seeder
                         ]);
                     }
                 }
-                
+
                 DB::table('items')->insert([
                     [
                         'purchase_order_id' => $po3,
@@ -205,7 +204,7 @@ class PurchaseOrdersSeeder extends Seeder
 
         $suppliers = DB::table('suppliers')->get();
         $statuses = DB::table('statuses')->get();
-        
+
         if ($suppliers->isEmpty() || $statuses->isEmpty()) {
             return;
         }
@@ -223,17 +222,17 @@ class PurchaseOrdersSeeder extends Seeder
             $supplier = $suppliers->random();
             $status = $statuses->random();
             $purpose = $purposes[array_rand($purposes)];
-            
+
             // Random dates within the last 6 months
             $dateRequested = now()->subDays(rand(0, 180))->toDateString();
             $deliveryDate = now()->subDays(rand(0, 150))->toDateString();
-            
+
             // Random totals
             $subtotal = rand(5000, 100000) + (rand(0, 99) / 100);
             $shipping = rand(0, 2000) + (rand(0, 99) / 100);
             $discount = rand(0, 5000) + (rand(0, 99) / 100);
             $total = $subtotal + $shipping - $discount;
-            
+
             // Create PO
             DB::table('purchase_orders')->insert([
                 'purchase_order_id' => $poId,
@@ -241,7 +240,7 @@ class PurchaseOrdersSeeder extends Seeder
                 'supplier_id' => $supplier->supplier_id,
                 'purpose' => $purpose,
                 'purchase_order_no' => $poNo,
-                'official_receipt_no' => rand(0, 1) ? 'OR-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT) : null,
+                'official_receipt_no' => rand(0, 1) ? 'OR-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT) : null,
                 'date_requested' => $dateRequested,
                 'delivery_date' => $deliveryDate,
                 'shipping_fee' => $shipping,
@@ -251,7 +250,7 @@ class PurchaseOrdersSeeder extends Seeder
                 'created_at' => $dateRequested,
                 'updated_at' => $dateRequested,
             ]);
-            
+
             // Create approval record
             DB::table('approvals')->insert([
                 'approval_id' => (string) \Illuminate\Support\Str::uuid(),
@@ -264,11 +263,3 @@ class PurchaseOrdersSeeder extends Seeder
         }
     }
 }
-
-
-
-
-
-
-
-

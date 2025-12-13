@@ -1,19 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ApprovalController;
 // Auth and role controllers
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\ConstantsController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemsController;
-use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StatusController;
-use App\Http\Controllers\ConstantsController;
-use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SupplierController;
+use Illuminate\Support\Facades\Route;
 
 // Landing: redirect to login
 Route::get('/', function () {
@@ -43,9 +43,7 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::post('/query', [SuperAdminController::class, 'executeQuery'])->name('query');
     Route::get('/logs', [SuperAdminController::class, 'showLogs'])->name('logs');
     Route::post('/logs/clear', [SuperAdminController::class, 'clearLogs'])->name('logs.clear');
-    
 
-    
     // User management for superadmin
     Route::post('/users/reset-password', [SuperAdminController::class, 'resetUserPassword'])->name('users.reset-password');
     Route::post('/users/toggle', [SuperAdminController::class, 'toggleUserStatus'])->name('users.toggle');
@@ -63,7 +61,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 // Superadmin API routes - NO RESTRICTIONS FOR SUPERADMIN
 Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
-    Route::get('/test', function() {
+    Route::get('/test', function () {
         return response()->json(['success' => true, 'message' => 'API is working']);
     })->name('test');
     Route::get('/metrics', [SuperAdminController::class, 'getMetrics'])->name('metrics');
@@ -71,21 +69,38 @@ Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
     Route::get('/database/table-details/{table}', [SuperAdminController::class, 'getTableDetails'])->name('database.table-details');
     Route::get('/logs/recent', [SuperAdminController::class, 'getRecentLogsApi'])->name('logs.recent');
     Route::post('/logs/clear', [SuperAdminController::class, 'clearLogsApi'])->name('logs.clear');
+    Route::post('/logs/settings', [SuperAdminController::class, 'updateLogSettingsApi'])->name('logs.settings');
     Route::post('/database/optimize', [SuperAdminController::class, 'optimizeDatabaseApi'])->name('database.optimize');
     Route::post('/database/check-integrity', [SuperAdminController::class, 'checkDatabaseIntegrityApi'])->name('database.check-integrity');
     Route::post('/database/repair', [SuperAdminController::class, 'repairDatabaseTablesApi'])->name('database.repair');
     Route::post('/database/backup', [SuperAdminController::class, 'createDatabaseBackupApi'])->name('database.backup');
-    
+
     // User management API
     Route::post('/users/reset-password', [SuperAdminController::class, 'resetUserPasswordApi'])->name('users.reset-password');
     Route::post('/users/toggle', [SuperAdminController::class, 'toggleUserStatusApi'])->name('users.toggle');
     Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUserApi'])->name('users.delete');
     Route::post('/users/create', [SuperAdminController::class, 'createUserApi'])->name('users.create');
-    
+
     // Branding API
     Route::post('/branding/update', [SuperAdminController::class, 'updateBrandingApi'])->name('branding.update');
-});
 
+    // System-wide purchase orders API
+    Route::get('/purchase-orders', [SuperAdminController::class, 'getSystemPurchaseOrdersApi'])->name('purchase-orders.index');
+
+    // Security API
+    Route::get('/security/stats', [SuperAdminController::class, 'getSecurityStatsApi'])->name('security.stats');
+    Route::get('/security/alerts', [SuperAdminController::class, 'getSecurityAlertsApi'])->name('security.alerts');
+    Route::post('/security/update', [SuperAdminController::class, 'updateSecuritySettingsApi'])->name('security.update');
+    Route::post('/security/force-logout-all', [SuperAdminController::class, 'forceLogoutAllApi'])->name('security.force-logout-all');
+    Route::post('/security/terminate-session', [SuperAdminController::class, 'terminateSessionApi'])->name('security.terminate-session');
+
+    // System API
+    Route::post('/system/clear-cache', [SuperAdminController::class, 'clearCacheApi'])->name('system.clear-cache');
+    Route::post('/system/backup', [SuperAdminController::class, 'createBackupApi'])->name('system.backup');
+    Route::post('/system/update', [SuperAdminController::class, 'updateSystemApi'])->name('system.update');
+    Route::post('/system/restart-services', [SuperAdminController::class, 'restartServicesApi'])->name('system.restart-services');
+    Route::get('/system/info', [SuperAdminController::class, 'getSystemInfoApi'])->name('system.info');
+});
 
 // Purchase Orders (Requestor)
 Route::prefix('po')->name('po.')->group(function () {
@@ -137,7 +152,7 @@ Route::get('/api/items/suggestions', [ItemController::class, 'suggestions'])->na
 Route::get('/api/items/latest-price', [ItemController::class, 'latestPrice'])->name('api.items.latest_price');
 
 // Status API for status change modal
-Route::get('/api/statuses', function() {
+Route::get('/api/statuses', function () {
     return response()->json(\DB::table('statuses')->get());
 });
 
@@ -146,12 +161,6 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('index');
     Route::post('/profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
     Route::post('/password', [SettingsController::class, 'updatePassword'])->name('password.update');
-    Route::post('/logo/upload', [SettingsController::class, 'uploadLogo'])->name('logo.upload');
-    Route::delete('/logo/remove', [SettingsController::class, 'removeLogo'])->name('logo.remove');
-    Route::post('/preferences', [SettingsController::class, 'updatePreferences'])->name('preferences.update');
-    Route::get('/preferences', [SettingsController::class, 'getPreferences'])->name('preferences.get');
-    Route::post('/notifications', [SettingsController::class, 'updateNotifications'])->name('notifications.update');
-    Route::get('/notifications', [SettingsController::class, 'getNotifications'])->name('notifications.get');
 });
 
 // Status management routes (used by Dashboard Status Configuration)
@@ -175,4 +184,3 @@ Route::prefix('api/superadmin')->name('api.superadmin.')->group(function () {
     Route::get('/constants', [ConstantsController::class, 'getAllConstants'])->name('constants.all');
     Route::post('/constants/update', [ConstantsController::class, 'updateConstant'])->name('constants.update');
 });
-

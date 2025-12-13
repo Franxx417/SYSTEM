@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\Api;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Create Purchase Order API Request
- * 
+ *
  * Validates incoming requests for creating purchase orders via API
  */
 class CreatePurchaseOrderRequest extends FormRequest
@@ -39,7 +39,7 @@ class CreatePurchaseOrderRequest extends FormRequest
             'shipping_fee' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'official_receipt_no' => 'nullable|string|max:100',
-            
+
             // Items array
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string|max:255',
@@ -75,7 +75,6 @@ class CreatePurchaseOrderRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      *
-     * @param  \Illuminate\Contracts\Validation\Validator  $validator
      * @return void
      *
      * @throws \Illuminate\Http\Exceptions\HttpResponseException
@@ -89,12 +88,12 @@ class CreatePurchaseOrderRequest extends FormRequest
                     'code' => 'VALIDATION_ERROR',
                     'message' => 'Validation failed',
                     'status' => 422,
-                    'details' => $validator->errors()
+                    'details' => $validator->errors(),
                 ],
                 'meta' => [
                     'timestamp' => now()->toIso8601String(),
-                    'version' => '1.0.0'
-                ]
+                    'version' => '1.0.0',
+                ],
             ], 422)
         );
     }

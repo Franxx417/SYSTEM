@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class SecuritySession extends Model
 {
     protected $table = 'security_sessions';
-    
+
     public $timestamps = false;
-    
+
     protected $fillable = [
         'id',
         'user_id',
@@ -43,7 +43,7 @@ class SecuritySession extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
-                    ->where('expires_at', '>', now());
+            ->where('expires_at', '>', now());
     }
 
     public function scopeExpired($query)
@@ -70,7 +70,7 @@ class SecuritySession extends Model
     public function terminate()
     {
         $this->update(['is_active' => false]);
-        
+
         // Log the session termination
         SystemActivityLog::logSecurityEvent(
             'session_terminated',
@@ -102,22 +102,22 @@ class SecuritySession extends Model
     public static function terminateAllForUser($userId)
     {
         $sessions = self::where('user_id', $userId)->where('is_active', true)->get();
-        
+
         foreach ($sessions as $session) {
             $session->terminate();
         }
-        
+
         return $sessions->count();
     }
 
     public static function cleanupExpiredSessions()
     {
         $expired = self::expired()->get();
-        
+
         foreach ($expired as $session) {
             $session->update(['is_active' => false]);
         }
-        
+
         return $expired->count();
     }
 
@@ -128,7 +128,7 @@ class SecuritySession extends Model
             request()->header('Accept-Language'),
             request()->header('Accept-Encoding'),
         ];
-        
+
         return hash('sha256', implode('|', array_filter($components)));
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use App\Services\BrandingService;
+use Illuminate\Support\ServiceProvider;
 
 class BrandingServiceProvider extends ServiceProvider
 {
@@ -13,9 +13,9 @@ class BrandingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(BrandingService::class, function ($app) {
-            return new BrandingService();
+            return new BrandingService;
         });
-        
+
         $this->app->alias(BrandingService::class, 'branding');
     }
 

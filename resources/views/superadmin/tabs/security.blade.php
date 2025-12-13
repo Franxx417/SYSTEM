@@ -98,10 +98,10 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-1"></i>Update Settings
                         </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="forceLogoutAll()">
+                        <button type="button" class="btn btn-outline-danger" data-action="force-logout-all">
                             <i class="fas fa-sign-out-alt me-1"></i>Force Logout All
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="refreshSecurityData()">
+                        <button type="button" class="btn btn-outline-info" data-action="security-refresh">
                             <i class="fas fa-sync me-1"></i>Refresh
                         </button>
                     </div>
@@ -126,7 +126,7 @@
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
                     </select>
-                    <button class="btn btn-sm btn-outline-primary" onclick="refreshAlerts()">
+                    <button class="btn btn-sm btn-outline-primary" data-action="security-refresh-alerts">
                         <i class="fas fa-sync me-1"></i>Refresh
                     </button>
                 </div>
@@ -145,105 +145,5 @@
 </div>
 
 <!-- Real-time Activity Monitor removed -->
-
-<script>
-// Security Dashboard JavaScript
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSecurityDashboard();
-    setupEventListeners();
-});
-
-function initializeSecurityDashboard() {
-    refreshSecurityData();
-}
-
-function setupEventListeners() {
-    const securityForm = document.getElementById('security-settings-form');
-    if (securityForm) {
-        securityForm.addEventListener('submit', handleSecuritySettingsUpdate);
-    }
-    const alertFilter = document.getElementById('alert-severity-filter');
-    if (alertFilter) {
-        alertFilter.addEventListener('change', refreshAlerts);
-    }
-}
-
-function refreshSecurityData() {
-    const mockData = {
-        statistics: {
-            active_sessions_count: 3,
-            login_success_rate: 95.2,
-            unresolved_alerts: 0,
-            activities_last_24h: 147,
-            critical_alerts: 0,
-            activity_by_hour: generateMockActivityData()
-        },
-        // active_sessions removed
-    };
-    
-    updateSecurityOverview(mockData.statistics);
-}
-
-function updateSecurityOverview(stats) {
-    const elements = {
-        'active-sessions-count': stats.active_sessions_count || 0,
-        'login-success-rate': (stats.login_success_rate || 0) + '%',
-        'security-alerts-count': stats.unresolved_alerts || 0,
-        'activities-24h': stats.activities_last_24h || 0
-    };
-    
-    Object.entries(elements).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-    });
-    
-    const statusBadge = document.getElementById('security-status');
-    if (statusBadge) {
-        if (stats.critical_alerts > 0) {
-            statusBadge.className = 'badge bg-danger';
-            statusBadge.textContent = 'Critical';
-        } else if (stats.unresolved_alerts > 0) {
-            statusBadge.className = 'badge bg-warning';
-            statusBadge.textContent = 'Alerts';
-        } else {
-            statusBadge.className = 'badge bg-success';
-            statusBadge.textContent = 'Secure';
-        }
-    }
-}
-
-// updateActiveSessions and activity chart removed
-
-// terminateSession removed
-
-function forceLogoutAll() {
-    if (!confirm('Are you sure you want to force logout all users?')) return;
-    showNotification('All sessions terminated successfully', 'success');
-    refreshSecurityData();
-}
-
-// refreshSessions removed
-
-function refreshAlerts() {
-    setTimeout(() => refreshSecurityData(), 500);
-}
-
-function handleSecuritySettingsUpdate(event) {
-    event.preventDefault();
-    showNotification('Security settings updated successfully', 'success');
-}
-
-// Auto-refresh removed
-
-// getDeviceIcon and generateMockActivityData removed
-
-function showNotification(message, type) {
-    if (typeof showQuickNotification === 'function') {
-        showQuickNotification(message, type);
-    } else {
-        alert(message);
-    }
-}
-</script>
 
 <!-- Chart.js removed -->

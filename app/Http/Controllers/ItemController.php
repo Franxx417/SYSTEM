@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ItemController
  *
@@ -19,16 +20,17 @@ class ItemController extends Controller
         if ($desc === '') {
             return response()->json(['price' => null]);
         }
-        
+
         // Get the latest price for this item from ANY source (seeded or user-created)
         // Trim and compare case-insensitively to catch small input variations
         $price = DB::table('items')
             ->whereRaw('LOWER(item_description) = LOWER(?)', [trim($desc)])
             ->orderByDesc('created_at')
             ->value('unit_price');
-            
+
         return response()->json(['price' => $price]);
     }
+
     public function suggestions(Request $request)
     {
         $supplierId = $request->query('supplier_id');
@@ -53,5 +55,3 @@ class ItemController extends Controller
         return response()->json($items);
     }
 }
-
-

@@ -14,7 +14,7 @@ class SettingsSeeder extends Seeder
             ['key' => 'branding.logo_path', 'value' => null],
             ['key' => 'company_logo', 'value' => null],
             ['key' => 'company_name', 'value' => 'Global Agility'],
-            
+
             // Database configuration settings
             ['key' => 'db.host', 'value' => env('DB_HOST', 'localhost')],
             ['key' => 'db.port', 'value' => env('DB_PORT', '1433')],
@@ -29,11 +29,9 @@ class SettingsSeeder extends Seeder
             ['key' => 'db.timeout', 'value' => env('DB_TIMEOUT', '30')],
         ];
         foreach ($defaults as $row) {
-            if (!DB::table('settings')->where('key', $row['key'])->exists()) {
+            if (! DB::table('settings')->where('key', $row['key'])->exists()) {
                 DB::table('settings')->insert($row + ['created_at' => now(), 'updated_at' => now()]);
             }
         }
     }
 }
-
-

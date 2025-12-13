@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\SystemSetting;
+use Illuminate\Console\Command;
 
 class SeedSystemSettings extends Command
 {
@@ -23,32 +23,34 @@ class SeedSystemSettings extends Command
     public function handle()
     {
         $force = $this->option('force');
-        
-        if (!$force && SystemSetting::count() > 0) {
-            if (!$this->confirm('System settings already exist. Do you want to continue?')) {
+
+        if (! $force && SystemSetting::count() > 0) {
+            if (! $this->confirm('System settings already exist. Do you want to continue?')) {
                 $this->info('Operation cancelled.');
+
                 return 0;
             }
         }
 
         $this->info('Seeding system settings...');
-        
+
         try {
             SystemSetting::seedDefaults();
             $this->info('✅ System settings seeded successfully!');
-            
+
             $count = SystemSetting::count();
             $this->info("📊 Total settings: {$count}");
-            
+
             // Show categories
             $categories = SystemSetting::select('category')
                 ->groupBy('category')
                 ->pluck('category');
-                
-            $this->info('📁 Categories: ' . $categories->implode(', '));
-            
+
+            $this->info('📁 Categories: '.$categories->implode(', '));
+
         } catch (\Exception $e) {
-            $this->error('❌ Failed to seed settings: ' . $e->getMessage());
+            $this->error('❌ Failed to seed settings: '.$e->getMessage());
+
             return 1;
         }
 

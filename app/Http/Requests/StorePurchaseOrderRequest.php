@@ -15,34 +15,34 @@ class StorePurchaseOrderRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'supplier_id' => ['required','string'],
-            'purpose' => ['required','string','max:255'],
-            'date_requested' => ['required','date'],
-            'delivery_date' => ['required','date','after_or_equal:date_requested'],
-            'items' => ['required','array','min:1'],
+            'supplier_id' => ['required', 'string'],
+            'purpose' => ['required', 'string', 'max:255'],
+            'date_requested' => ['required', 'date'],
+            'delivery_date' => ['required', 'date', 'after_or_equal:date_requested'],
+            'items' => ['required', 'array', 'min:1'],
             // Align with DB column size (e.g., NVARCHAR(255))
-            'items.*.item_name' => ['nullable','string','max:255'],
-            'items.*.item_description' => ['required','string','max:255'],
-            'items.*.quantity' => ['required','integer','min:1'],
-            'items.*.unit_price' => ['nullable','numeric','min:0'],
+            'items.*.item_name' => ['nullable', 'string', 'max:255'],
+            'items.*.item_description' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             // Optional checkboxes from UI; do not block saving if absent
-            'vatable_sales' => ['nullable','boolean'],
-            'apply_vat_12' => ['nullable','boolean'],
+            'vatable_sales' => ['nullable', 'boolean'],
+            'apply_vat_12' => ['nullable', 'boolean'],
             // New supplier fields
-            'new_supplier' => ['nullable','array'],
-            'new_supplier.name' => ['required_if:supplier_id,__manual__','string','max:255'],
-            'new_supplier.vat_type' => ['nullable','string','in:VAT,Non-VAT,VAT Exempt'],
-            'new_supplier.address' => ['nullable','string','max:255'],
-            'new_supplier.contact_person' => ['nullable','string','max:255'],
-            'new_supplier.contact_number' => ['nullable','string','max:255'],
-            'new_supplier.tin_no' => ['nullable','string','max:255'],
+            'new_supplier' => ['nullable', 'array'],
+            'new_supplier.name' => ['required_if:supplier_id,__manual__', 'string', 'max:255'],
+            'new_supplier.vat_type' => ['nullable', 'string', 'in:VAT,Non-VAT,VAT Exempt'],
+            'new_supplier.address' => ['nullable', 'string', 'max:255'],
+            'new_supplier.contact_person' => ['nullable', 'string', 'max:255'],
+            'new_supplier.contact_number' => ['nullable', 'string', 'max:255'],
+            'new_supplier.tin_no' => ['nullable', 'string', 'max:255'],
         ];
-        
+
         // Only require supplier_id to exist if it's not a manual entry
         if ($this->input('supplier_id') !== '__manual__') {
             $rules['supplier_id'][] = 'exists:suppliers,supplier_id';
         }
-        
+
         return $rules;
     }
 
@@ -63,5 +63,3 @@ class StorePurchaseOrderRequest extends FormRequest
         ];
     }
 }
-
-

@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('security_sessions')) {
+        if (! Schema::hasTable('security_sessions')) {
             Schema::create('security_sessions', function (Blueprint $table) {
                 $table->string('id', 100)->primary();
                 $table->uuid('user_id')->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration
                 $table->string('device_fingerprint', 255)->nullable();
                 $table->json('location_data')->nullable(); // Country, city, etc.
                 $table->dateTime('expires_at')->nullable();
-                
+
                 // Indexes
                 $table->index(['user_id', 'is_active']);
                 $table->index(['ip_address', 'last_activity']);

@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('security_alerts')) {
+        if (! Schema::hasTable('security_alerts')) {
             Schema::create('security_alerts', function (Blueprint $table) {
                 $table->uuid('id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->string('alert_type', 50); // failed_login, suspicious_activity, privilege_escalation, etc.
@@ -24,7 +24,7 @@ return new class extends Migration
                 $table->dateTime('resolved_at')->nullable();
                 $table->text('resolution_notes')->nullable();
                 $table->dateTime('created_at')->default(DB::raw('GETDATE()'));
-                
+
                 // Indexes
                 $table->index(['alert_type', 'created_at']);
                 $table->index(['severity', 'is_resolved']);

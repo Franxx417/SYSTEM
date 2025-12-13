@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 class SecurityAlert extends Model
 {
     use HasUuids;
 
     protected $table = 'security_alerts';
-    
+
     public $timestamps = false;
-    
+
     protected $fillable = [
         'alert_type',
         'severity',

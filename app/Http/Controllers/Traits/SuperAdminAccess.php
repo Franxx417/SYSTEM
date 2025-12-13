@@ -13,35 +13,36 @@ trait SuperAdminAccess
     protected function checkAuth(Request $request, $allowedRoles = []): array
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth) {
+        if (! $auth) {
             abort(403, 'Authentication required');
         }
-        
+
         // SUPERADMIN HAS UNRESTRICTED ACCESS TO EVERYTHING
         if ($auth['role'] === 'superadmin') {
             return $auth;
         }
-        
+
         // For non-superadmin users, check allowed roles
-        if (!empty($allowedRoles)) {
+        if (! empty($allowedRoles)) {
             $allowedRoles = is_array($allowedRoles) ? $allowedRoles : [$allowedRoles];
-            if (!in_array($auth['role'], $allowedRoles)) {
+            if (! in_array($auth['role'], $allowedRoles)) {
                 abort(403, 'Insufficient permissions');
             }
         }
-        
+
         return $auth;
     }
-    
+
     /**
      * Check if current user is superadmin
      */
     protected function isSuperAdmin(Request $request): bool
     {
         $auth = $request->session()->get('auth_user');
+
         return $auth && $auth['role'] === 'superadmin';
     }
-    
+
     /**
      * Get current authenticated user
      */

@@ -2,14 +2,14 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('login')) {
+        if (! Schema::hasTable('login')) {
             Schema::create('login', function (Blueprint $table) {
                 $table->uuid('login_id')->primary()->default(DB::raw('NEWSEQUENTIALID()'));
                 $table->uuid('user_id')->unique();
@@ -27,5 +27,3 @@ return new class extends Migration
         Schema::dropIfExists('login');
     }
 };
-
-

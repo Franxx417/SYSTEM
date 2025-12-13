@@ -1,11 +1,14 @@
 /**
- * Branding & UI Tab - Real-time Preview and Interactions
- * Handles logo upload, color changes, typography, and live preview updates
+ * Branding (Core)
+ * Application name/description + logo upload (drag/drop + preview) + save.
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('branding-form');
     if (!form) return;
+
+    if (form.dataset.brandingJsBound === '1') return;
+    form.dataset.brandingJsBound = '1';
 
     // Form elements
     const logoInput = document.getElementById('logo');
@@ -13,54 +16,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoPreview = document.getElementById('logo-preview');
     const logoPreviewContainer = document.getElementById('logo-preview-container');
     const logoUploadPrompt = document.getElementById('logo-upload-prompt');
-    const removeLogo = document.getElementById('remove-logo-btn');
-    
+
     // App info inputs
     const appName = document.getElementById('app_name');
-    const appTagline = document.getElementById('app_tagline');
     const appDescription = document.getElementById('app_description');
-    
-    // Logo positioning
-    const logoPosition = document.getElementById('logo_position');
-    const logoSize = document.getElementById('logo_size');
-    const logoSizeValue = document.getElementById('logo_size_value');
-    
-    // Color inputs
-    const primaryColor = document.getElementById('primary_color');
-    const primaryColorHex = document.getElementById('primary_color_hex');
-    const secondaryColor = document.getElementById('secondary_color');
-    const secondaryColorHex = document.getElementById('secondary_color_hex');
-    const accentColor = document.getElementById('accent_color');
-    const accentColorHex = document.getElementById('accent_color_hex');
-    
-    // Typography
-    const fontFamily = document.getElementById('font_family');
-    const fontSize = document.getElementById('font_size');
-    const fontSizeValue = document.getElementById('font_size_value');
-    
-    // Preview elements
-    const previewAppName = document.getElementById('preview-app-name');
-    const previewAppTagline = document.getElementById('preview-app-tagline');
-    const previewLogo = document.getElementById('preview-logo');
-    const previewLogoContainer = document.getElementById('preview-logo-container');
-    const previewText = document.getElementById('preview-text');
-    const previewBtnPrimary = document.getElementById('preview-btn-primary');
-    const previewBtnSecondary = document.getElementById('preview-btn-secondary');
-    const previewBtnAccent = document.getElementById('preview-btn-accent');
-    const previewLink = document.getElementById('preview-link');
-    const previewAlert = document.getElementById('preview-alert');
     
     // State management
     const unsavedBadge = document.getElementById('unsaved-changes');
     let hasUnsavedChanges = false;
     let originalFormData = new FormData(form);
 
+    function getFormSignature() {
+        const fd = new FormData(form);
+        const pairs = [];
+
+        for (const [k, v] of fd.entries()) {
+            if (v instanceof File) {
+                // Empty file inputs can appear as a File with size 0 and empty name
+                const fileSig = v && v.name ? `${v.name}|${v.size}|${v.type}` : '';
+                pairs.push([k, fileSig]);
+            } else {
+                pairs.push([k, String(v)]);
+            }
+        }
+
+        pairs.sort((a, b) => (a[0] + '=' + a[1]).localeCompare(b[0] + '=' + b[1]));
+        return pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    }
+
+    let originalSignature = getFormSignature();
+
+    function syncDirtyState() {
+        const currentSig = getFormSignature();
+        hasUnsavedChanges = currentSig !== originalSignature;
+        if (unsavedBadge) {
+            unsavedBadge.style.display = hasUnsavedChanges ? 'inline-block' : 'none';
+        }
+    }
+
     // Track changes
     function markAsChanged() {
-        hasUnsavedChanges = true;
-        if (unsavedBadge) {
-            unsavedBadge.style.display = 'inline-block';
-        }
+        syncDirtyState();
     }
 
     // Character counter for description
@@ -72,7 +68,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         appDescription.addEventListener('input', updateDescCount);
+        appDescription.addEventListener('input', markAsChanged);
         updateDescCount();
+    }
+
+    if (appName) {
+        appName.addEventListener('input', markAsChanged);
     }
 
     // Logo Upload Handling
@@ -117,23 +118,33 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
+                // Ensure the dropped file is actually submitted with the form
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(files[0]);
+                    logoInput.files = dt.files;
+                } catch (_) {
+                    // If DataTransfer isn't supported, preview still works but submit may require click-upload
+                }
                 handleLogoFile(files[0]);
             }
         });
 
-        // Remove logo button
-        if (removeLogo) {
-            removeLogo.addEventListener('click', function(e) {
-                e.stopPropagation();
-                clearLogoPreview();
-                logoInput.value = '';
-                markAsChanged();
-            });
-        }
     }
 
     function handleLogoFile(file) {
         if (!file) return;
+
+        // Ensure file is attached to input even when handleLogoFile is called directly
+        if (logoInput && (!logoInput.files || logoInput.files.length === 0)) {
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                logoInput.files = dt.files;
+            } catch (_) {
+                // Ignore if browser doesn't allow programmatic file assignment
+            }
+        }
 
         // Validate file type
         const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
@@ -156,13 +167,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 logoPreview.src = e.target.result;
                 logoPreviewContainer.style.display = 'block';
                 logoUploadPrompt.style.display = 'none';
-                
-                // Update live preview
-                if (previewLogo) {
-                    previewLogo.src = e.target.result;
-                    previewLogo.style.display = 'block';
-                }
-                
                 markAsChanged();
             }
         };
@@ -188,289 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Real-time Preview Updates
-    
-    // App Name
-    if (appName && previewAppName) {
-        appName.addEventListener('input', function() {
-            previewAppName.textContent = this.value || 'Procurement System';
-            markAsChanged();
-        });
-    }
-
-    // App Tagline
-    if (appTagline && previewAppTagline) {
-        appTagline.addEventListener('input', function() {
-            previewAppTagline.textContent = this.value;
-            previewAppTagline.style.display = this.value ? 'block' : 'none';
-            markAsChanged();
-        });
-    }
-
-    // Logo Position
-    if (logoPosition && previewLogoContainer) {
-        logoPosition.addEventListener('change', function() {
-            previewLogoContainer.style.justifyContent = this.value === 'center' ? 'center' : 
-                                                         this.value === 'right' ? 'flex-end' : 'flex-start';
-            markAsChanged();
-        });
-    }
-
-    // Logo Size
-    if (logoSize && logoSizeValue && previewLogo) {
-        logoSize.addEventListener('input', function() {
-            const size = this.value + 'px';
-            logoSizeValue.textContent = size;
-            previewLogo.style.height = size;
-            markAsChanged();
-        });
-    }
-
-    // Color Pickers - Primary
-    if (primaryColor && primaryColorHex) {
-        primaryColor.addEventListener('input', function() {
-            primaryColorHex.value = this.value;
-            updateColorPreview('primary', this.value);
-            markAsChanged();
-        });
-        primaryColorHex.addEventListener('input', function() {
-            if (isValidHex(this.value)) {
-                primaryColor.value = this.value;
-                updateColorPreview('primary', this.value);
-                markAsChanged();
-            }
-        });
-    }
-
-    // Color Pickers - Secondary
-    if (secondaryColor && secondaryColorHex) {
-        secondaryColor.addEventListener('input', function() {
-            secondaryColorHex.value = this.value;
-            updateColorPreview('secondary', this.value);
-            markAsChanged();
-        });
-        secondaryColorHex.addEventListener('input', function() {
-            if (isValidHex(this.value)) {
-                secondaryColor.value = this.value;
-                updateColorPreview('secondary', this.value);
-                markAsChanged();
-            }
-        });
-    }
-
-    // Color Pickers - Accent
-    if (accentColor && accentColorHex) {
-        accentColor.addEventListener('input', function() {
-            accentColorHex.value = this.value;
-            updateColorPreview('accent', this.value);
-            markAsChanged();
-        });
-        accentColorHex.addEventListener('input', function() {
-            if (isValidHex(this.value)) {
-                accentColor.value = this.value;
-                updateColorPreview('accent', this.value);
-                markAsChanged();
-            }
-        });
-    }
-
-    function isValidHex(hex) {
-        return /^#[0-9A-F]{6}$/i.test(hex);
-    }
-
-    function updateColorPreview(type, color) {
-        if (type === 'primary') {
-            if (previewBtnPrimary) {
-                previewBtnPrimary.style.backgroundColor = color;
-                previewBtnPrimary.style.borderColor = color;
-                previewBtnPrimary.style.color = getContrastColor(color);
-            }
-            if (previewLink) {
-                previewLink.style.color = color;
-            }
-        } else if (type === 'secondary') {
-            if (previewBtnSecondary) {
-                previewBtnSecondary.style.backgroundColor = color;
-                previewBtnSecondary.style.borderColor = color;
-                previewBtnSecondary.style.color = getContrastColor(color);
-            }
-        } else if (type === 'accent') {
-            if (previewBtnAccent) {
-                previewBtnAccent.style.backgroundColor = color;
-                previewBtnAccent.style.borderColor = color;
-                previewBtnAccent.style.color = getContrastColor(color);
-            }
-            if (previewAlert) {
-                previewAlert.style.backgroundColor = color + '20'; // 20% opacity
-                previewAlert.style.borderColor = color;
-                previewAlert.style.color = color;
-            }
-        }
-    }
-
-    // Calculate contrast color for text
-    function getContrastColor(hexColor) {
-        const r = parseInt(hexColor.substr(1, 2), 16);
-        const g = parseInt(hexColor.substr(3, 2), 16);
-        const b = parseInt(hexColor.substr(5, 2), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? '#000000' : '#ffffff';
-    }
-
-    // Font Family
-    if (fontFamily && previewText) {
-        fontFamily.addEventListener('change', function() {
-            const selectedFont = this.value;
-            previewText.style.fontFamily = selectedFont === 'system-ui' ? 
-                'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' : 
-                `"${selectedFont}", sans-serif`;
-            
-            // Load Google Font if needed
-            if (selectedFont !== 'system-ui' && !['Arial', 'Helvetica', 'Georgia', 'Times New Roman'].includes(selectedFont)) {
-                loadGoogleFont(selectedFont);
-            }
-            markAsChanged();
-        });
-    }
-
-    // Font Size
-    if (fontSize && fontSizeValue && previewText) {
-        fontSize.addEventListener('input', function() {
-            const size = this.value + 'px';
-            fontSizeValue.textContent = size;
-            previewText.style.fontSize = size;
-            markAsChanged();
-        });
-    }
-
-    // Theme Mode
-    const themeMode = document.getElementById('theme_mode');
-    if (themeMode) {
-        themeMode.addEventListener('change', function() {
-            applyThemeMode(this.value);
-            markAsChanged();
-        });
-    }
-
-    function applyThemeMode(mode) {
-        const html = document.documentElement;
-        if (mode === 'dark') {
-            html.setAttribute('data-bs-theme', 'dark');
-        } else if (mode === 'light') {
-            html.removeAttribute('data-bs-theme');
-        } else if (mode === 'auto') {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                html.setAttribute('data-bs-theme', 'dark');
-            } else {
-                html.removeAttribute('data-bs-theme');
-            }
-        }
-    }
-
-    // Sidebar Position
-    const sidebarPosition = document.getElementById('sidebar_position');
-    if (sidebarPosition) {
-        sidebarPosition.addEventListener('change', function() {
-            applySidebarPosition(this.value);
-            markAsChanged();
-        });
-    }
-
-    function applySidebarPosition(position) {
-        const body = document.body;
-        body.setAttribute('data-sidebar-position', position);
-    }
-
-    // Button Styling
-    const buttonRadius = document.getElementById('button_radius');
-    const buttonRadiusValue = document.getElementById('button_radius_value');
-    if (buttonRadius && buttonRadiusValue) {
-        buttonRadius.addEventListener('input', function() {
-            const radius = this.value + 'px';
-            buttonRadiusValue.textContent = radius;
-            applyButtonStyling();
-            markAsChanged();
-        });
-    }
-
-    const buttonPadding = document.getElementById('button_padding');
-    const buttonPaddingValue = document.getElementById('button_padding_value');
-    if (buttonPadding && buttonPaddingValue) {
-        buttonPadding.addEventListener('input', function() {
-            const padding = this.value + 'px';
-            buttonPaddingValue.textContent = padding;
-            applyButtonStyling();
-            markAsChanged();
-        });
-    }
-
-    const buttonShadow = document.getElementById('button_shadow');
-    if (buttonShadow) {
-        buttonShadow.addEventListener('change', function() {
-            applyButtonStyling();
-            markAsChanged();
-        });
-    }
-
-    function applyButtonStyling() {
-        const radius = buttonRadius ? buttonRadius.value : 4;
-        const padding = buttonPadding ? buttonPadding.value : 8;
-        const shadow = buttonShadow ? buttonShadow.value : 'sm';
-
-        const previewButtons = [previewBtnPrimary, previewBtnSecondary, previewBtnAccent];
-        previewButtons.forEach(btn => {
-            if (btn) {
-                btn.style.borderRadius = radius + 'px';
-                btn.style.padding = padding + 'px ' + (padding * 1.5) + 'px';
-                
-                if (shadow === 'none') {
-                    btn.style.boxShadow = 'none';
-                } else if (shadow === 'sm') {
-                    btn.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                } else if (shadow === 'md') {
-                    btn.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                } else if (shadow === 'lg') {
-                    btn.style.boxShadow = '0 10px 15px rgba(0, 0, 0, 0.1)';
-                }
-            }
-        });
-    }
-
-    // Custom CSS
-    const customCss = document.getElementById('custom_css');
-    const cssCount = document.getElementById('css_count');
-    if (customCss && cssCount) {
-        const updateCssCount = () => {
-            cssCount.textContent = customCss.value.length;
-        };
-        customCss.addEventListener('input', function() {
-            updateCssCount();
-            applyCustomCss(this.value);
-            markAsChanged();
-        });
-        updateCssCount();
-    }
-
-    function applyCustomCss(cssContent) {
-        let styleElement = document.getElementById('custom-branding-css');
-        if (!styleElement) {
-            styleElement = document.createElement('style');
-            styleElement.id = 'custom-branding-css';
-            document.head.appendChild(styleElement);
-        }
-        styleElement.textContent = cssContent;
-    }
-
-    function loadGoogleFont(fontName) {
-        const linkId = 'google-font-' + fontName.replace(/\s+/g, '-');
-        if (!document.getElementById(linkId)) {
-            const link = document.createElement('link');
-            link.id = linkId;
-            link.rel = 'stylesheet';
-            link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@400;500;600;700&display=swap`;
-            document.head.appendChild(link);
-        }
-    }
 
     // Reset Button
     const resetBtn = document.getElementById('reset-btn');
@@ -519,6 +240,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 showSuccessNotification('Branding updated successfully!');
                 
                 // Clear unsaved changes badge
+                originalFormData = new FormData(form);
+                originalSignature = getFormSignature();
                 hasUnsavedChanges = false;
                 if (unsavedBadge) {
                     unsavedBadge.style.display = 'none';
@@ -636,21 +359,13 @@ document.addEventListener('DOMContentLoaded', function() {
             appName.classList.remove('is-invalid');
         }
 
-        // Validate color hex inputs
-        [primaryColorHex, secondaryColorHex, accentColorHex].forEach(input => {
-            if (input && input.value && !isValidHex(input.value)) {
-                input.classList.add('is-invalid');
-                isValid = false;
-            } else if (input) {
-                input.classList.remove('is-invalid');
-            }
-        });
-
         return isValid;
     }
 
     // Warn about unsaved changes
     window.addEventListener('beforeunload', function(e) {
+        // Re-check current dirty state to avoid prompting on false positives
+        syncDirtyState();
         if (hasUnsavedChanges) {
             e.preventDefault();
             e.returnValue = '';
@@ -658,54 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Initialize preview with current values
-    function initializePreview() {
-        if (primaryColor && previewBtnPrimary) {
-            updateColorPreview('primary', primaryColor.value);
-        }
-        if (secondaryColor && previewBtnSecondary) {
-            updateColorPreview('secondary', secondaryColor.value);
-        }
-        if (accentColor && previewBtnAccent) {
-            updateColorPreview('accent', accentColor.value);
-        }
-        if (fontFamily && previewText) {
-            const selectedFont = fontFamily.value;
-            previewText.style.fontFamily = selectedFont === 'system-ui' ? 
-                'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' : 
-                `"${selectedFont}", sans-serif`;
-        }
-        if (fontSize && previewText) {
-            previewText.style.fontSize = fontSize.value + 'px';
-        }
-        if (logoSize && previewLogo) {
-            previewLogo.style.height = logoSize.value + 'px';
-        }
-        if (logoPosition && previewLogoContainer) {
-            previewLogoContainer.style.justifyContent = logoPosition.value === 'center' ? 'center' : 
-                                                         logoPosition.value === 'right' ? 'flex-end' : 'flex-start';
-        }
-        
-        // Initialize theme mode
-        if (themeMode) {
-            applyThemeMode(themeMode.value);
-        }
-        
-        // Initialize sidebar position
-        if (sidebarPosition) {
-            applySidebarPosition(sidebarPosition.value);
-        }
-        
-        // Initialize button styling
-        applyButtonStyling();
-        
-        // Initialize custom CSS
-        if (customCss && customCss.value) {
-            applyCustomCss(customCss.value);
-        }
-    }
+    // Ensure we don't show the unsaved prompt/badge unless the user truly changed something
+    syncDirtyState();
 
-    initializePreview();
-
-    console.log('Branding tab initialized with real-time preview and advanced customization');
+    console.log('Branding tab initialized');
 });

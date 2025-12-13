@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use App\Services\ConstantsService;
 
 class StatusController extends Controller
 {
@@ -16,7 +15,7 @@ class StatusController extends Controller
     public function index(Request $request)
     {
         try {
-            if (!Schema::hasTable('statuses')) {
+            if (! Schema::hasTable('statuses')) {
                 return response()->json(['error' => 'Statuses table not found'], 404);
             }
 
@@ -27,7 +26,7 @@ class StatusController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'data' => $statuses
+                    'data' => $statuses,
                 ]);
             }
 
@@ -36,7 +35,8 @@ class StatusController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
-            return back()->withErrors(['error' => 'Failed to load statuses: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to load statuses: '.$e->getMessage()]);
         }
     }
 
@@ -47,12 +47,12 @@ class StatusController extends Controller
     {
         // Force JSON response for AJAX requests
         $wantsJson = $request->wantsJson() || $request->ajax() || $request->expectsJson();
-        
+
         try {
             // Validate inputs
             $validator = \Validator::make($request->all(), [
                 'status_name' => 'required|string|max:50|unique:statuses,status_name',
-                'description' => 'nullable|string|max:255'
+                'description' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -60,9 +60,10 @@ class StatusController extends Controller
                     return response()->json([
                         'success' => false,
                         'error' => 'Validation failed',
-                        'errors' => $validator->errors()
+                        'errors' => $validator->errors(),
                     ], 422);
                 }
+
                 return back()->withErrors($validator)->withInput();
             }
 
@@ -73,7 +74,7 @@ class StatusController extends Controller
                 'status_name' => trim($request->status_name),
                 'description' => trim($request->description ?? ''),
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             if ($wantsJson) {
@@ -82,35 +83,37 @@ class StatusController extends Controller
                     'message' => 'Status created successfully',
                     'data' => [
                         'status_id' => $statusId,
-                        'status_name' => $request->status_name
-                    ]
+                        'status_name' => $request->status_name,
+                    ],
                 ], 201);
             }
 
             return back()->with('success', 'Status created successfully');
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($wantsJson) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Validation failed',
-                    'errors' => $e->errors()
+                    'errors' => $e->errors(),
                 ], 422);
             }
+
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             \Log::error('Status creation failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             if ($wantsJson) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Failed to create status: ' . $e->getMessage()
+                    'error' => 'Failed to create status: '.$e->getMessage(),
                 ], 500);
             }
-            return back()->withErrors(['error' => 'Failed to create status: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to create status: '.$e->getMessage()]);
         }
     }
 
@@ -121,12 +124,12 @@ class StatusController extends Controller
     {
         // Force JSON response for AJAX requests
         $wantsJson = $request->wantsJson() || $request->ajax() || $request->expectsJson();
-        
+
         try {
             // Validate inputs
             $validator = \Validator::make($request->all(), [
-                'status_name' => 'required|string|max:50|unique:statuses,status_name,' . $id . ',status_id',
-                'description' => 'nullable|string|max:255'
+                'status_name' => 'required|string|max:50|unique:statuses,status_name,'.$id.',status_id',
+                'description' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -134,21 +137,23 @@ class StatusController extends Controller
                     return response()->json([
                         'success' => false,
                         'error' => 'Validation failed',
-                        'errors' => $validator->errors()
+                        'errors' => $validator->errors(),
                     ], 422);
                 }
+
                 return back()->withErrors($validator)->withInput();
             }
 
             // Check if status exists
             $exists = DB::table('statuses')->where('status_id', $id)->exists();
-            if (!$exists) {
+            if (! $exists) {
                 if ($wantsJson) {
                     return response()->json([
                         'success' => false,
-                        'error' => 'Status not found'
+                        'error' => 'Status not found',
                     ], 404);
                 }
+
                 return back()->withErrors(['error' => 'Status not found']);
             }
 
@@ -158,7 +163,7 @@ class StatusController extends Controller
                 ->update([
                     'status_name' => trim($request->status_name),
                     'description' => trim($request->description ?? ''),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             if ($wantsJson) {
@@ -167,36 +172,38 @@ class StatusController extends Controller
                     'message' => 'Status updated successfully',
                     'data' => [
                         'status_id' => $id,
-                        'status_name' => $request->status_name
-                    ]
+                        'status_name' => $request->status_name,
+                    ],
                 ], 200);
             }
 
             return back()->with('success', 'Status updated successfully');
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($wantsJson) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Validation failed',
-                    'errors' => $e->errors()
+                    'errors' => $e->errors(),
                 ], 422);
             }
+
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             \Log::error('Status update failed', [
                 'status_id' => $id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             if ($wantsJson) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Failed to update status: ' . $e->getMessage()
+                    'error' => 'Failed to update status: '.$e->getMessage(),
                 ], 500);
             }
-            return back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to update status: '.$e->getMessage()]);
         }
     }
 
@@ -208,33 +215,35 @@ class StatusController extends Controller
         try {
             // Check if status is in use
             if (Schema::hasTable('purchase_orders')) {
-                $inUse = DB::table('purchase_orders')->where('status', function($query) use ($id) {
+                $inUse = DB::table('purchase_orders')->where('status', function ($query) use ($id) {
                     $query->select('status_name')
-                          ->from('statuses')
-                          ->where('status_id', $id);
+                        ->from('statuses')
+                        ->where('status_id', $id);
                 })->exists();
 
                 if ($inUse) {
                     if ($request->expectsJson()) {
                         return response()->json(['error' => 'Cannot delete status that is currently in use'], 400);
                     }
+
                     return back()->withErrors(['error' => 'Cannot delete status that is currently in use']);
                 }
             }
 
             $deleted = DB::table('statuses')->where('status_id', $id)->delete();
 
-            if (!$deleted) {
+            if (! $deleted) {
                 if ($request->expectsJson()) {
                     return response()->json(['error' => 'Status not found'], 404);
                 }
+
                 return back()->withErrors(['error' => 'Status not found']);
             }
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Status deleted successfully'
+                    'message' => 'Status deleted successfully',
                 ]);
             }
 
@@ -243,7 +252,8 @@ class StatusController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
-            return back()->withErrors(['error' => 'Failed to delete status: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to delete status: '.$e->getMessage()]);
         }
     }
 
@@ -260,13 +270,12 @@ class StatusController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $statuses
+                'data' => $statuses,
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 
     /**
      * Get status configuration for API/AJAX requests
@@ -274,15 +283,15 @@ class StatusController extends Controller
     public function config(Request $request)
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth || $auth['role'] !== 'superadmin') {
+        if (! $auth || $auth['role'] !== 'superadmin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         try {
-            if (!Schema::hasTable('statuses')) {
+            if (! Schema::hasTable('statuses')) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Statuses table not found'
+                    'error' => 'Statuses table not found',
                 ]);
             }
 
@@ -300,7 +309,7 @@ class StatusController extends Controller
                     ->select('statuses.status_id', DB::raw('COUNT(*) as usage_count'))
                     ->groupBy('statuses.status_id')
                     ->get();
-                
+
                 foreach ($usage as $u) {
                     $statusUsage[$u->status_id] = $u->usage_count;
                 }
@@ -308,31 +317,30 @@ class StatusController extends Controller
 
             // Format the config data
             $config = [
-                'statuses' => $statuses->map(function($status) use ($statusUsage) {
+                'statuses' => $statuses->map(function ($status) use ($statusUsage) {
                     return [
                         'id' => $status->status_id,
                         'name' => $status->status_name,
                         'description' => $status->description,
                         'sort_order' => $status->sort_order ?? 0,
                         'usage_count' => $statusUsage[$status->status_id] ?? 0,
-                        'can_delete' => ($statusUsage[$status->status_id] ?? 0) == 0
+                        'can_delete' => ($statusUsage[$status->status_id] ?? 0) == 0,
                     ];
                 }),
                 'total_count' => $statuses->count(),
-                'total_usage' => array_sum($statusUsage)
+                'total_usage' => array_sum($statusUsage),
             ];
 
             return response()->json([
                 'success' => true,
-                'config' => $config
+                'config' => $config,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
-
 }

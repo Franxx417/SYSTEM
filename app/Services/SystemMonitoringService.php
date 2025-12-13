@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use App\Services\ConstantsService;
+use Illuminate\Support\Facades\Log;
 
 class SystemMonitoringService
 {
@@ -22,7 +21,7 @@ class SystemMonitoringService
             'php' => $this->getPhpMetrics(),
             'system_load' => $this->getSystemLoad(),
             'uptime' => $this->getSystemUptime(),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 
@@ -38,11 +37,12 @@ class SystemMonitoringService
                 return $this->getLinuxCpuUsage();
             }
         } catch (\Throwable $e) {
-            Log::warning('Failed to get CPU usage: ' . $e->getMessage());
+            Log::warning('Failed to get CPU usage: '.$e->getMessage());
+
             return [
                 'usage_percent' => 0,
                 'cores' => 1,
-                'status' => 'unavailable'
+                'status' => 'unavailable',
             ];
         }
     }
@@ -57,7 +57,7 @@ class SystemMonitoringService
             $output = shell_exec('wmic cpu get loadpercentage /value 2>nul');
             if ($output) {
                 preg_match('/LoadPercentage=(\d+)/', $output, $matches);
-                $cpuUsage = isset($matches[1]) ? (int)$matches[1] : 0;
+                $cpuUsage = isset($matches[1]) ? (int) $matches[1] : 0;
             } else {
                 $cpuUsage = 0;
             }
@@ -66,19 +66,19 @@ class SystemMonitoringService
             $coreOutput = shell_exec('wmic cpu get NumberOfCores /value 2>nul');
             $cores = 1;
             if ($coreOutput && preg_match('/NumberOfCores=(\d+)/', $coreOutput, $matches)) {
-                $cores = (int)$matches[1];
+                $cores = (int) $matches[1];
             }
 
             return [
                 'usage_percent' => $cpuUsage,
                 'cores' => $cores,
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
             return [
                 'usage_percent' => 0,
                 'cores' => 1,
-                'status' => 'error'
+                'status' => 'error',
             ];
         }
     }
@@ -97,13 +97,13 @@ class SystemMonitoringService
                 'usage_percent' => round($cpuUsage, 2),
                 'cores' => $cores,
                 'load_average' => $load,
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
             return [
                 'usage_percent' => 0,
                 'cores' => 1,
-                'status' => 'error'
+                'status' => 'error',
             ];
         }
     }
@@ -117,17 +117,18 @@ class SystemMonitoringService
             if (PHP_OS_FAMILY === 'Windows') {
                 $output = shell_exec('wmic cpu get NumberOfCores /value 2>nul');
                 if ($output && preg_match('/NumberOfCores=(\d+)/', $output, $matches)) {
-                    return (int)$matches[1];
+                    return (int) $matches[1];
                 }
             } else {
                 $cores = shell_exec('nproc 2>/dev/null');
                 if ($cores) {
-                    return (int)trim($cores);
+                    return (int) trim($cores);
                 }
             }
         } catch (\Throwable $e) {
             // Ignore errors
         }
+
         return 1;
     }
 
@@ -143,14 +144,15 @@ class SystemMonitoringService
             return [
                 'php' => $phpMemory,
                 'system' => $systemMemory,
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
-            Log::warning('Failed to get memory usage: ' . $e->getMessage());
+            Log::warning('Failed to get memory usage: '.$e->getMessage());
+
             return [
                 'php' => ['used' => 0, 'limit' => 0, 'usage_percent' => 0],
                 'system' => ['used' => 0, 'total' => 0, 'usage_percent' => 0],
-                'status' => 'unavailable'
+                'status' => 'unavailable',
             ];
         }
     }
@@ -163,7 +165,7 @@ class SystemMonitoringService
         $used = memory_get_usage(true);
         $peak = memory_get_peak_usage(true);
         $limit = $this->parseMemoryLimit(ini_get('memory_limit'));
-        
+
         return [
             'used' => $used,
             'used_formatted' => $this->formatBytes($used),
@@ -171,7 +173,7 @@ class SystemMonitoringService
             'peak_formatted' => $this->formatBytes($peak),
             'limit' => $limit,
             'limit_formatted' => $this->formatBytes($limit),
-            'usage_percent' => $limit > 0 ? round(($used / $limit) * 100, 2) : 0
+            'usage_percent' => $limit > 0 ? round(($used / $limit) * 100, 2) : 0,
         ];
     }
 
@@ -191,7 +193,7 @@ class SystemMonitoringService
                 'used' => 0,
                 'total' => 0,
                 'free' => 0,
-                'usage_percent' => 0
+                'usage_percent' => 0,
             ];
         }
     }
@@ -208,10 +210,10 @@ class SystemMonitoringService
 
             if ($output) {
                 if (preg_match('/TotalVisibleMemorySize=(\d+)/', $output, $matches)) {
-                    $total = (int)$matches[1] * 1024; // Convert from KB to bytes
+                    $total = (int) $matches[1] * 1024; // Convert from KB to bytes
                 }
                 if (preg_match('/FreePhysicalMemory=(\d+)/', $output, $matches)) {
-                    $free = (int)$matches[1] * 1024; // Convert from KB to bytes
+                    $free = (int) $matches[1] * 1024; // Convert from KB to bytes
                 }
             }
 
@@ -225,14 +227,14 @@ class SystemMonitoringService
                 'total_formatted' => $this->formatBytes($total),
                 'free' => $free,
                 'free_formatted' => $this->formatBytes($free),
-                'usage_percent' => $usagePercent
+                'usage_percent' => $usagePercent,
             ];
         } catch (\Throwable $e) {
             return [
                 'used' => 0,
                 'total' => 0,
                 'free' => 0,
-                'usage_percent' => 0
+                'usage_percent' => 0,
             ];
         }
     }
@@ -249,7 +251,7 @@ class SystemMonitoringService
 
             foreach ($lines as $line) {
                 if (preg_match('/^(\w+):\s+(\d+)\s+kB/', $line, $matches)) {
-                    $memory[$matches[1]] = (int)$matches[2] * 1024; // Convert to bytes
+                    $memory[$matches[1]] = (int) $matches[2] * 1024; // Convert to bytes
                 }
             }
 
@@ -265,14 +267,14 @@ class SystemMonitoringService
                 'total_formatted' => $this->formatBytes($total),
                 'free' => $free,
                 'free_formatted' => $this->formatBytes($free),
-                'usage_percent' => $usagePercent
+                'usage_percent' => $usagePercent,
             ];
         } catch (\Throwable $e) {
             return [
                 'used' => 0,
                 'total' => 0,
                 'free' => 0,
-                'usage_percent' => 0
+                'usage_percent' => 0,
             ];
         }
     }
@@ -298,16 +300,17 @@ class SystemMonitoringService
                 'free_formatted' => $this->formatBytes($free),
                 'usage_percent' => $usagePercent,
                 'path' => $path,
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
-            Log::warning('Failed to get disk usage: ' . $e->getMessage());
+            Log::warning('Failed to get disk usage: '.$e->getMessage());
+
             return [
                 'used' => 0,
                 'total' => 0,
                 'free' => 0,
                 'usage_percent' => 0,
-                'status' => 'unavailable'
+                'status' => 'unavailable',
             ];
         }
     }
@@ -326,15 +329,16 @@ class SystemMonitoringService
                 'active_connections' => $activeConnections,
                 'database_connectivity' => $networkStatus['database'],
                 'external_connectivity' => $networkStatus['external'],
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
-            Log::warning('Failed to get network activity: ' . $e->getMessage());
+            Log::warning('Failed to get network activity: '.$e->getMessage());
+
             return [
                 'active_connections' => 0,
                 'database_connectivity' => false,
                 'external_connectivity' => false,
-                'status' => 'unavailable'
+                'status' => 'unavailable',
             ];
         }
     }
@@ -346,7 +350,8 @@ class SystemMonitoringService
     {
         try {
             // For SQL Server, get active connections
-            $result = DB::select("SELECT COUNT(*) as count FROM sys.dm_exec_sessions WHERE is_user_process = 1");
+            $result = DB::select('SELECT COUNT(*) as count FROM sys.dm_exec_sessions WHERE is_user_process = 1');
+
             return $result[0]->count ?? 0;
         } catch (\Throwable $e) {
             return 0;
@@ -380,7 +385,7 @@ class SystemMonitoringService
 
         return [
             'database' => $database,
-            'external' => $external
+            'external' => $external,
         ];
     }
 
@@ -398,15 +403,16 @@ class SystemMonitoringService
                 'connection_status' => $connectionStatus,
                 'performance' => $queryPerformance,
                 'size' => $size,
-                'status' => 'active'
+                'status' => 'active',
             ];
         } catch (\Throwable $e) {
-            Log::warning('Failed to get database metrics: ' . $e->getMessage());
+            Log::warning('Failed to get database metrics: '.$e->getMessage());
+
             return [
                 'connection_status' => false,
                 'performance' => ['avg_query_time' => 0],
                 'size' => ['total' => 0],
-                'status' => 'unavailable'
+                'status' => 'unavailable',
             ];
         }
     }
@@ -418,6 +424,7 @@ class SystemMonitoringService
     {
         try {
             DB::connection()->getPdo();
+
             return true;
         } catch (\Throwable $e) {
             return false;
@@ -436,12 +443,12 @@ class SystemMonitoringService
 
             return [
                 'avg_query_time' => round($queryTime, 2),
-                'last_query_time' => round($queryTime, 2)
+                'last_query_time' => round($queryTime, 2),
             ];
         } catch (\Throwable $e) {
             return [
                 'avg_query_time' => 0,
-                'last_query_time' => 0
+                'last_query_time' => 0,
             ];
         }
     }
@@ -465,13 +472,13 @@ class SystemMonitoringService
             return [
                 'total' => $sizeBytes,
                 'total_formatted' => $this->formatBytes($sizeBytes),
-                'size_mb' => $sizeMB
+                'size_mb' => $sizeMB,
             ];
         } catch (\Throwable $e) {
             return [
                 'total' => 0,
                 'total_formatted' => '0 B',
-                'size_mb' => 0
+                'size_mb' => 0,
             ];
         }
     }
@@ -492,8 +499,8 @@ class SystemMonitoringService
                 'pdo_sqlsrv' => extension_loaded('pdo_sqlsrv'),
                 'sqlsrv' => extension_loaded('sqlsrv'),
                 'mbstring' => extension_loaded('mbstring'),
-                'fileinfo' => extension_loaded('fileinfo')
-            ]
+                'fileinfo' => extension_loaded('fileinfo'),
+            ],
         ];
     }
 
@@ -505,11 +512,12 @@ class SystemMonitoringService
         try {
             if (function_exists('sys_getloadavg')) {
                 $load = sys_getloadavg();
+
                 return [
                     '1min' => $load[0] ?? 0,
                     '5min' => $load[1] ?? 0,
                     '15min' => $load[2] ?? 0,
-                    'status' => 'active'
+                    'status' => 'active',
                 ];
             }
         } catch (\Throwable $e) {
@@ -520,7 +528,7 @@ class SystemMonitoringService
             '1min' => 0,
             '5min' => 0,
             '15min' => 0,
-            'status' => 'unavailable'
+            'status' => 'unavailable',
         ];
     }
 
@@ -536,21 +544,23 @@ class SystemMonitoringService
                     $bootTime = \DateTime::createFromFormat('YmdHis', $matches[1]);
                     if ($bootTime) {
                         $uptime = time() - $bootTime->getTimestamp();
+
                         return [
                             'seconds' => $uptime,
                             'formatted' => $this->formatUptime($uptime),
-                            'status' => 'active'
+                            'status' => 'active',
                         ];
                     }
                 }
             } else {
                 $uptime = file_get_contents('/proc/uptime');
                 if ($uptime) {
-                    $seconds = (int)floatval(trim($uptime));
+                    $seconds = (int) floatval(trim($uptime));
+
                     return [
                         'seconds' => $seconds,
                         'formatted' => $this->formatUptime($seconds),
-                        'status' => 'active'
+                        'status' => 'active',
                     ];
                 }
             }
@@ -561,7 +571,7 @@ class SystemMonitoringService
         return [
             'seconds' => 0,
             'formatted' => 'Unknown',
-            'status' => 'unavailable'
+            'status' => 'unavailable',
         ];
     }
 
@@ -576,7 +586,7 @@ class SystemMonitoringService
 
         $limit = trim($limit);
         $last = strtolower($limit[strlen($limit) - 1]);
-        $value = (int)$limit;
+        $value = (int) $limit;
 
         switch ($last) {
             case 'g':
@@ -602,7 +612,7 @@ class SystemMonitoringService
 
         $bytes /= pow(1024, $pow);
 
-        return round($bytes, 2) . ' ' . $units[$pow];
+        return round($bytes, 2).' '.$units[$pow];
     }
 
     /**
@@ -615,9 +625,15 @@ class SystemMonitoringService
         $minutes = floor(($seconds % 3600) / 60);
 
         $parts = [];
-        if ($days > 0) $parts[] = $days . 'd';
-        if ($hours > 0) $parts[] = $hours . 'h';
-        if ($minutes > 0) $parts[] = $minutes . 'm';
+        if ($days > 0) {
+            $parts[] = $days.'d';
+        }
+        if ($hours > 0) {
+            $parts[] = $hours.'h';
+        }
+        if ($minutes > 0) {
+            $parts[] = $minutes.'m';
+        }
 
         return empty($parts) ? '< 1m' : implode(' ', $parts);
     }

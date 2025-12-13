@@ -262,7 +262,7 @@
                 <li class="nav-item"><a class="nav-link @if(request()->is('items/inventory')) active @endif" href="{{ route('items.inventory') }}"><i class="fas fa-warehouse me-2"></i>Inventory Summary</a></li>
                 @php($auth = session('auth_user'))
                 @if($auth && $auth['role']==='requestor')
-                    <li class="nav-item"><a class="nav-link @if(request()->is('po*')) active @endif" href="{{ route('po.index') }}"><i class="fas fa-file-invoice-dollar me-2"></i>My Purchase Orders</a></li>
+                    <li class="nav-item"><a class="nav-link @if(request()->is('po*')) active @endif" href="{{ route('po.index') }}"><i class="fas fa-file-invoice-dollar me-2"></i>All Purchase Orders</a></li>
                     <li class="nav-item"><a class="nav-link @if(request()->is('suppliers*')) active @endif" href="{{ route('suppliers.index') }}"><i class="fas fa-truck me-2"></i>Suppliers</a></li>
                 @elseif($auth && $auth['role']==='superadmin')
                     <!-- SUPERADMIN UNRESTRICTED ACCESS - All System Features -->

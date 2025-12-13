@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ApprovalController
  *
@@ -20,7 +21,10 @@ class ApprovalController extends Controller
     private function auth(Request $request): array
     {
         $auth = $request->session()->get('auth_user');
-        if (!$auth) abort(403);
+        if (! $auth) {
+            abort(403);
+        }
+
         return $auth;
     }
 
@@ -36,9 +40,7 @@ class ApprovalController extends Controller
             'received_by_id' => $auth['user_id'],
             'received_at' => now(),
         ]);
-        return back()->with('status','Marked as received');
+
+        return back()->with('status', 'Marked as received');
     }
 }
-
-
-

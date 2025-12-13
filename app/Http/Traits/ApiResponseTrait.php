@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * API Response Trait
- * 
+ *
  * Provides standardized response format for all API endpoints
  * Ensures consistent error handling and response structure
  */
@@ -16,10 +16,7 @@ trait ApiResponseTrait
     /**
      * Success response
      *
-     * @param mixed $data
-     * @param string $message
-     * @param int $status
-     * @return \Illuminate\Http\JsonResponse
+     * @param  mixed  $data
      */
     protected function successResponse($data = null, string $message = 'Success', int $status = 200): JsonResponse
     {
@@ -27,27 +24,21 @@ trait ApiResponseTrait
             'success' => true,
             'message' => $message,
         ];
-        
+
         if ($data !== null) {
             $response['data'] = $data;
         }
-        
+
         $response['meta'] = [
             'timestamp' => now()->toIso8601String(),
-            'version' => '1.0.0'
+            'version' => '1.0.0',
         ];
-        
+
         return response()->json($response, $status);
     }
-    
+
     /**
      * Error response
-     *
-     * @param string $message
-     * @param string $code
-     * @param int $status
-     * @param array $details
-     * @return \Illuminate\Http\JsonResponse
      */
     protected function errorResponse(
         string $message = 'An error occurred',
@@ -60,35 +51,32 @@ trait ApiResponseTrait
             'error' => [
                 'code' => $code,
                 'message' => $message,
-                'status' => $status
-            ]
+                'status' => $status,
+            ],
         ];
-        
-        if (!empty($details)) {
+
+        if (! empty($details)) {
             $response['error']['details'] = $details;
         }
-        
+
         $response['meta'] = [
             'timestamp' => now()->toIso8601String(),
-            'version' => '1.0.0'
+            'version' => '1.0.0',
         ];
-        
+
         // Log error for monitoring
         Log::error('API Error', [
             'code' => $code,
             'message' => $message,
             'status' => $status,
-            'details' => $details
+            'details' => $details,
         ]);
-        
+
         return response()->json($response, $status);
     }
-    
+
     /**
      * Validation error response
-     *
-     * @param array $errors
-     * @return \Illuminate\Http\JsonResponse
      */
     protected function validationErrorResponse(array $errors): JsonResponse
     {
@@ -99,12 +87,9 @@ trait ApiResponseTrait
             $errors
         );
     }
-    
+
     /**
      * Not found response
-     *
-     * @param string $resource
-     * @return \Illuminate\Http\JsonResponse
      */
     protected function notFoundResponse(string $resource = 'Resource'): JsonResponse
     {
@@ -114,11 +99,9 @@ trait ApiResponseTrait
             404
         );
     }
-    
+
     /**
      * Unauthorized response
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     protected function unauthorizedResponse(): JsonResponse
     {
@@ -128,11 +111,9 @@ trait ApiResponseTrait
             401
         );
     }
-    
+
     /**
      * Forbidden response
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     protected function forbiddenResponse(): JsonResponse
     {
@@ -142,13 +123,11 @@ trait ApiResponseTrait
             403
         );
     }
-    
+
     /**
      * Paginated response
      *
-     * @param mixed $paginator
-     * @param string $message
-     * @return \Illuminate\Http\JsonResponse
+     * @param  mixed  $paginator
      */
     protected function paginatedResponse($paginator, string $message = 'Success'): JsonResponse
     {
@@ -160,23 +139,21 @@ trait ApiResponseTrait
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
                 'from' => $paginator->firstItem(),
-                'to' => $paginator->lastItem()
-            ]
+                'to' => $paginator->lastItem(),
+            ],
         ], $message);
     }
-    
+
     /**
      * Created response
      *
-     * @param mixed $data
-     * @param string $message
-     * @return \Illuminate\Http\JsonResponse
+     * @param  mixed  $data
      */
     protected function createdResponse($data = null, string $message = 'Resource created successfully'): JsonResponse
     {
         return $this->successResponse($data, $message, 201);
     }
-    
+
     /**
      * No content response
      *

@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 class SystemActivityLog extends Model
 {
     use HasUuids;
 
     protected $table = 'system_activity_logs';
-    
+
     public $timestamps = false;
-    
+
     protected $fillable = [
         'user_id',
         'username',
@@ -95,7 +95,7 @@ class SystemActivityLog extends Model
             'action' => $action,
             'resource_type' => $resourceType,
             'resource_id' => $resourceId,
-            'description' => $description ?? "User performed {$action}" . ($resourceType ? " on {$resourceType}" : ''),
+            'description' => $description ?? "User performed {$action}".($resourceType ? " on {$resourceType}" : ''),
         ]);
     }
 }

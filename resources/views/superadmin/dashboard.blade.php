@@ -4,7 +4,7 @@
 @section('page_subheading','System administration and oversight')
 
 @push('styles')
-    @vite(['resources/css/pages/superadmin-dashboard.css'])
+    <link rel="stylesheet" href="/css/superadmin-dashboard.css">
 @endpush
 
 @section('content')
@@ -227,7 +227,7 @@
 
 @push('scripts')
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    @vite(['resources/js/dashboards/superadmin-dashboard-enhanced.js'])
+    @vite(['resources/js/dashboards/superadmin-dashboard-enhanced.js', 'resources/css/pages/superadmin-dashboard.css'])
     <script>
     // Show Add User Modal
     function showAddUserModal() {

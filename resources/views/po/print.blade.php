@@ -27,6 +27,21 @@
             box-sizing: border-box;
             position: relative;
         }
+        .print-header {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 0 0 8px 0;
+            position: relative;
+            z-index: 20;
+        }
+        .print-header.pos-left { justify-content: flex-start; }
+        .print-header.pos-center { justify-content: center; }
+        .print-header.pos-right { justify-content: flex-end; }
+        .print-header-spacer {
+            height: var(--logo-block-height, 70px);
+        }
         .header { display:flex; justify-content:space-between; align-items:flex-start; }
         .brand { font-weight:800; letter-spacing:.5px; line-height:1.05; font-size:20px; text-align:center; }
         .title { text-align:center; font-weight:700; margin:15px 0 15px; font-size: 14pt; }
@@ -70,12 +85,14 @@
             color:#333; 
         }
         .company-logo {
-            max-height: 80px;
-            max-width: 300px;
+            max-height: var(--logo-max-height, 60px);
+            max-width: 100%;
             height: auto;
             width: auto;
             display: block;
-            margin: 0 auto 20px auto;
+            margin: 0;
+            object-fit: contain;
+            image-rendering: auto;
         }
         @media print { 
             .no-print { display:none; }
@@ -119,12 +136,11 @@
                 z-index: 11;
              }
              .company-logo {
-                max-height: 60px;
-                max-width: 250px;
+                max-height: var(--logo-max-height, 60px);
+                max-width: 100%;
                 height: auto;
                 width: auto;
                 display: block;
-                margin: 0 auto 15px auto;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
              }
@@ -142,15 +158,25 @@
         }
     </style>
 </head>
-<body>
+    <body>
     <div class="container">
         <div class="content-area">
             <div class="no-print" style="margin:10px 0; text-align:right">
                 <button onclick="window.print()">Print</button>
             </div>
-            
-            @if($companyLogo)
-                <img src="{{ $companyLogo }}" alt="Company Logo" class="company-logo">
+
+            @php
+                $logoPosition = $branding['logo_position'] ?? 'center';
+                $logoPositionClass = in_array($logoPosition, ['left','center','right'], true) ? $logoPosition : 'center';
+                $logoMaxHeight = (int)($branding['logo_size'] ?? 60);
+                $logoMaxHeight = max(30, min(120, $logoMaxHeight));
+                $logoBlockHeight = $logoMaxHeight + 10;
+            @endphp
+
+            @if(!empty($companyLogo))
+                <div class="print-header pos-{{ $logoPositionClass }}" style="--logo-max-height: {{ $logoMaxHeight }}px; --logo-block-height: {{ $logoBlockHeight }}px;">
+                    <img src="{{ $companyLogo }}" alt="Company Logo" class="company-logo">
+                </div>
             @endif
             
             <div class="title">LOCAL PURCHASE ORDER</div>

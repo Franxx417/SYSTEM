@@ -19,7 +19,7 @@ class StatusesSeeder extends Seeder
             ['status_name' => 'Rejected', 'description' => 'Rejected at any stage'],
         ];
         foreach ($statuses as $status) {
-            if (!DB::table('statuses')->where('status_name', $status['status_name'])->exists()) {
+            if (! DB::table('statuses')->where('status_name', $status['status_name'])->exists()) {
                 $guid = (string) Str::uuid();
                 DB::table('statuses')->insert([
                     'status_id' => $guid,
@@ -30,5 +30,3 @@ class StatusesSeeder extends Seeder
         }
     }
 }
-
-
